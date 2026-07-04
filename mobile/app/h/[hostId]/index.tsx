@@ -59,7 +59,10 @@ import { AuthFailedBanner } from '../../../src/components/AuthFailedBanner'
 import { WorkspaceDetailPlaceholder } from '../../../src/components/WorkspaceDetailPlaceholder'
 import { getCachedWorktrees } from '../../../src/cache/worktree-cache'
 import { setCachedRepos } from '../../../src/cache/repo-cache'
-import { colors, radii, spacing, typography } from '../../../src/theme/mobile-theme'
+import { spacing, radii, typography } from '../../../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../../../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../../../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../../../src/theme/mobile-theme-context'
 import { useResponsiveLayout } from '../../../src/layout/responsive-layout'
 import { leaveHostRoute } from '../../../src/host-route-exit'
 import { evaluateCompat, type CompatVerdict } from '../../../src/transport/protocol-compat'
@@ -132,6 +135,8 @@ export function HostScreen({
   // embedded as the sidebar the list already lives in a narrow pane, so the
   // cap is skipped (see the SectionList contentContainerStyle below).
   const { isWideLayout, contentMaxWidth } = useResponsiveLayout()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createHostScreenStyles(colors, chrome), [colors, chrome])
   const [initialCache] = useState(() =>
     hostId ? (getCachedWorktrees(hostId) as Worktree[] | null) : null
   )
@@ -1217,7 +1222,7 @@ export function HostScreen({
               </Pressable>
             )
           }}
-          ItemSeparatorComponent={ListSeparator}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => (
             <WorktreeListRow
               item={item}
@@ -1451,11 +1456,8 @@ export default function HostWorktreeRoute() {
   return <HostScreen />
 }
 
-function ListSeparator() {
-  return <View style={styles.separator} />
-}
-
-const styles = StyleSheet.create({
+function createHostScreenStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgBase
@@ -1502,12 +1504,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary
   },
   reconnectButton: {
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.button,
-    backgroundColor: colors.bgPanel,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle
+    ...chrome.reconnectButton
   },
   reconnectButtonText: {
     color: colors.textPrimary,
@@ -1557,13 +1554,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle
+    ...chrome.filterChip(false)
   },
   filterChipActive: {
-    borderColor: colors.textSecondary,
-    backgroundColor: colors.bgRaised
+    ...chrome.filterChip(true)
   },
   filterChipText: {
     fontSize: 12,
@@ -1593,16 +1587,12 @@ const styles = StyleSheet.create({
   toolbarIconButton: {
     width: 32,
     height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button
+    ...chrome.toolbarIconButton
   },
   embeddedToolbarIconButton: {
     flex: 1,
     height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button
+    ...chrome.toolbarIconButton
   },
   toolbarIconDisabled: {
     opacity: 0.6
@@ -1699,9 +1689,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs
   },
   filterGroup: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: 12,
-    overflow: 'hidden',
+    ...chrome.sectionCard,
     marginBottom: spacing.md
   },
   filterRow: {
@@ -1757,7 +1745,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.statusRed
   },
   confirmBtnPressed: {
-    opacity: 0.7
+    ...chrome.listRowPressed
   },
   confirmBtnCancelText: {
     fontSize: typography.bodySize,
@@ -1769,4 +1757,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff'
   }
-})
+  })
+}

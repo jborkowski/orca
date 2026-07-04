@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { colors, radii, spacing, typography } from '../src/theme/mobile-theme'
+import { radii, spacing, typography } from '../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../src/theme/mobile-theme-context'
 import { extractPairingCodeFromUrl } from '../src/transport/pairing'
 
 export default function PairRedirectScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ code?: string }>()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createPairRedirectStyles(colors, chrome), [colors, chrome])
   const [missingCode, setMissingCode] = useState(false)
 
   const goHome = useCallback(() => {
@@ -57,31 +62,33 @@ export default function PairRedirectScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgBase,
-    padding: spacing.lg
-  },
-  errorText: {
-    color: colors.statusRed,
-    fontSize: typography.bodySize,
-    lineHeight: 20,
-    marginBottom: spacing.xl,
-    textAlign: 'center'
-  },
-  primaryButton: {
-    alignItems: 'center',
-    backgroundColor: colors.textPrimary,
-    borderRadius: radii.button,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2
-  },
-  primaryButtonText: {
-    color: colors.bgBase,
-    fontSize: typography.bodySize,
-    fontWeight: '600'
-  }
-})
+function createPairRedirectStyles(colors: MobileThemeColors, _chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.bgBase,
+      padding: spacing.lg
+    },
+    errorText: {
+      color: colors.statusRed,
+      fontSize: typography.bodySize,
+      lineHeight: 20,
+      marginBottom: spacing.xl,
+      textAlign: 'center'
+    },
+    primaryButton: {
+      alignItems: 'center',
+      backgroundColor: colors.textPrimary,
+      borderRadius: radii.button,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm + 2
+    },
+    primaryButtonText: {
+      color: colors.bgBase,
+      fontSize: typography.bodySize,
+      fontWeight: '600'
+    }
+  })
+}

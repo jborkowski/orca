@@ -13,7 +13,8 @@ import Animated, {
   type AnimatedRef,
   type SharedValue
 } from 'react-native-reanimated'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { triggerMediumImpact, triggerSelection } from '../platform/haptics'
 import {
   clampDragReorderIndex,
@@ -227,6 +228,7 @@ function DragReorderRow({
   onAccessibilityMove: (key: string, delta: number) => void
   children: ReactNode
 }): React.JSX.Element {
+  const { colors, chrome, isEinkMode, motionEnabled } = useMobileTheme()
   const {
     positions,
     activeKey,
@@ -272,24 +274,28 @@ function DragReorderRow({
       return {
         top: activeTop.value,
         zIndex: 2,
-        elevation: 4,
-        shadowOpacity: 0.3,
+        elevation: isEinkMode ? 0 : 4,
+        shadowOpacity: isEinkMode ? 0 : 0.3,
         backgroundColor: colors.bgRaised,
-        transform: [{ scale: 1.02 }]
+        borderWidth: isEinkMode ? 1 : 0,
+        borderColor: isEinkMode ? colors.borderSubtle : 'transparent',
+        transform: [{ scale: isEinkMode ? 1 : 1.02 }]
       }
     }
     return {
-      top: withSpring(index * rowHeight, ROW_SPRING),
+      top: motionEnabled ? withSpring(index * rowHeight, ROW_SPRING) : index * rowHeight,
       zIndex: 0,
       elevation: 0,
       shadowOpacity: 0,
       backgroundColor: colors.bgPanel,
+      borderWidth: isEinkMode ? 1 : 0,
+      borderColor: isEinkMode ? colors.borderSubtle : 'transparent',
       transform: [{ scale: 1 }]
     }
   })
 
   return (
-    <Animated.View style={[styles.row, { height: rowHeight }, rowStyle]}>
+    <Animated.View style={[styles.row, chrome.noShadow, { height: rowHeight }, rowStyle]}>
       <View style={styles.rowContent}>{children}</View>
       <GestureDetector gesture={pan}>
         <Animated.View
@@ -314,7 +320,7 @@ function DragReorderRow({
           <GripVertical size={18} color={colors.textMuted} />
         </Animated.View>
       </GestureDetector>
-      <View style={styles.rowSeparator} />
+      <View style={[styles.rowSeparator, { backgroundColor: colors.borderSubtle }]} />
     </Animated.View>
   )
 }
@@ -343,7 +349,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: spacing.md,
     right: spacing.md,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle
+    height: StyleSheet.hairlineWidth
   }
 })

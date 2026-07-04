@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react-native'
 import { useHostClient } from '../../../../src/transport/client-context'
 import type { RpcSuccess } from '../../../../src/transport/types'
-import { colors, spacing, typography } from '../../../../src/theme/mobile-theme'
+import { spacing, typography } from '../../../../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../../../../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../../../../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../../../../src/theme/mobile-theme-context'
 import {
   fetchMobileGitHistory,
   mapMobileCommitRows,
@@ -26,6 +29,8 @@ export default function HistoryScreen() {
   const worktreeId = firstParam(params.worktreeId)
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createHistoryScreenStyles(colors, chrome), [colors, chrome])
   const { client, state: connState } = useHostClient(hostId)
 
   const [rows, setRows] = useState<MobileCommitRow[] | null>(null)
@@ -127,7 +132,7 @@ export default function HistoryScreen() {
         </View>
       )
     },
-    [expanded, filesById, toggleCommit]
+    [colors.textMuted, colors.textSecondary, expanded, filesById, styles, toggleCommit]
   )
 
   return (
@@ -162,46 +167,52 @@ export default function HistoryScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgBase },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm
-  },
-  back: { padding: spacing.xs },
-  title: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
-  state: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  stateText: { color: colors.textMuted, fontSize: typography.bodySize },
-  commit: { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
-  commitHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2
-  },
-  commitHeaderPressed: { backgroundColor: colors.bgRaised },
-  commitMain: { flex: 1, minWidth: 0 },
-  commitSubject: { color: colors.textPrimary, fontSize: typography.bodySize },
-  commitMeta: {
-    color: colors.textMuted,
-    fontSize: typography.metaSize,
-    fontFamily: typography.monoFamily,
-    marginTop: 2
-  },
-  files: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
-  fileRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  filePath: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: typography.metaSize,
-    fontFamily: typography.monoFamily
-  },
-  fileStat: { fontSize: typography.metaSize, fontFamily: typography.monoFamily },
-  add: { color: colors.gitDecorationAdded },
-  del: { color: colors.gitDecorationDeleted },
-  empty: { color: colors.textMuted, fontSize: typography.metaSize }
-})
+function createHistoryScreenStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.bgBase },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.sm
+    },
+    back: {
+      ...chrome.toolbarIconButton,
+      width: 36,
+      height: 36
+    },
+    title: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '600' },
+    state: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+    stateText: { color: colors.textMuted, fontSize: typography.bodySize },
+    commit: { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+    commitHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2
+    },
+    commitHeaderPressed: { ...chrome.listRowPressed },
+    commitMain: { flex: 1, minWidth: 0 },
+    commitSubject: { color: colors.textPrimary, fontSize: typography.bodySize },
+    commitMeta: {
+      color: colors.textMuted,
+      fontSize: typography.metaSize,
+      fontFamily: typography.monoFamily,
+      marginTop: 2
+    },
+    files: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
+    fileRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    filePath: {
+      flex: 1,
+      color: colors.textSecondary,
+      fontSize: typography.metaSize,
+      fontFamily: typography.monoFamily
+    },
+    fileStat: { fontSize: typography.metaSize, fontFamily: typography.monoFamily },
+    add: { color: colors.gitDecorationAdded },
+    del: { color: colors.gitDecorationDeleted },
+    empty: { color: colors.textMuted, fontSize: typography.metaSize }
+  })
+}

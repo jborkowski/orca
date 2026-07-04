@@ -1,9 +1,12 @@
+import { useMemo } from 'react'
 import { Bell, ChevronDown, ChevronRight, GitBranch, GitPullRequest } from 'lucide-react-native'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import type { RepoIcon } from '../../../src/shared/repo-icon'
 import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
 import { triggerMediumImpact } from '../platform/haptics'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { radii, spacing, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { AgentSpinner } from './AgentSpinner'
 import { MobileRepoIcon } from './MobileRepoIcon'
 import { WorktreeAgentList } from './WorktreeAgentList'
@@ -69,6 +72,8 @@ export function WorktreeListRow<T extends WorktreeListRowItem>({
   onLongPress,
   onToggleLineage
 }: Props<T>) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createWorktreeListRowStyles(colors), [colors])
   const isFolderWorkspace = item.workspaceKind === 'folder-workspace'
   const folderMeta = item.comment?.trim() || item.path || 'Folder'
   const metaText = isFolderWorkspace ? folderMeta : displayBranch(item.branch)
@@ -80,8 +85,8 @@ export function WorktreeListRow<T extends WorktreeListRowItem>({
       style={({ pressed }) => [
         styles.worktreeRow,
         lineageDepth > 0 && { paddingLeft: spacing.lg + lineageDepth * 18 },
-        item.isActive && styles.worktreeRowActive,
-        pressed && styles.worktreeRowPressed
+        item.isActive && chrome.listRowActive,
+        pressed && chrome.listRowPressed
       ]}
       disabled={isReadOnly}
       onPress={() => onPress(item)}
@@ -195,7 +200,8 @@ export function WorktreeListRow<T extends WorktreeListRowItem>({
   )
 }
 
-const styles = StyleSheet.create({
+function createWorktreeListRowStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
   worktreeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -205,17 +211,6 @@ const styles = StyleSheet.create({
     // Reserve the active accent bar width so active/inactive rows align.
     borderLeftWidth: 2,
     borderLeftColor: 'transparent'
-  },
-  worktreeRowPressed: {
-    backgroundColor: colors.bgRaised
-  },
-  // Highlight the worktree currently focused on the desktop, mirroring the
-  // desktop sidebar's selected-card treatment (raised fill + left accent).
-  worktreeRowActive: {
-    backgroundColor: colors.bgPanel,
-    // Neutral grey accent, matching the desktop's active-tab indicator rather
-    // than a blue line.
-    borderLeftColor: colors.textSecondary
   },
   indicatorCol: {
     width: 20,
@@ -324,4 +319,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     paddingTop: 3
   }
-})
+  })
+}

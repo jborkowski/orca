@@ -11,6 +11,8 @@ export type TerminalWebViewCommand =
       initialData?: string
       oscLinks?: TerminalOscLinkRange[]
       terminalTheme?: RuntimeMobileTerminalTheme
+      // Why: e-ink panels use the DOM renderer to avoid WebGL refresh artifacts.
+      disableWebgl?: boolean
       fontScale?: number
       // Why: width-reflow re-streams replay the same content rewrapped at new
       // cols; preserve the reader's scroll position instead of jumping to bottom.

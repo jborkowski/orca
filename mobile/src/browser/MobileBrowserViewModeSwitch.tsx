@@ -1,5 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { colors, radii, spacing } from '../theme/mobile-theme'
+import { useMemo } from 'react'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
 import type { MobileBrowserViewMode } from './browser-screencast-request'
 
 type Props = {
@@ -18,6 +22,12 @@ export function MobileBrowserViewModeSwitch({
   value,
   onChange
 }: Props): React.JSX.Element {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(
+    () => createMobileBrowserViewModeSwitchStyles(colors, chrome),
+    [colors, chrome]
+  )
+
   return (
     <View style={styles.switch}>
       {VIEW_MODES.map((mode) => (
@@ -27,6 +37,7 @@ export function MobileBrowserViewModeSwitch({
           selected={value === mode.id}
           disabled={disabled}
           onPress={() => onChange(mode.id)}
+          styles={styles}
         />
       ))}
     </View>
@@ -37,12 +48,14 @@ function ViewModeButton({
   disabled,
   label,
   onPress,
-  selected
+  selected,
+  styles
 }: {
   disabled?: boolean
   label: string
   onPress: () => void
   selected: boolean
+  styles: ReturnType<typeof createMobileBrowserViewModeSwitchStyles>
 }) {
   return (
     <Pressable
@@ -63,38 +76,43 @@ function ViewModeButton({
   )
 }
 
-const styles = StyleSheet.create({
-  switch: {
-    minHeight: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radii.input,
-    backgroundColor: colors.bgRaised,
-    padding: 2
-  },
-  button: {
-    minHeight: 24,
-    minWidth: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button,
-    paddingHorizontal: spacing.sm
-  },
-  buttonPressed: {
-    backgroundColor: colors.borderSubtle
-  },
-  buttonSelected: {
-    backgroundColor: colors.textPrimary
-  },
-  buttonText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  buttonTextSelected: {
-    color: colors.bgBase
-  },
-  disabled: {
-    opacity: 0.35
-  }
-})
+function createMobileBrowserViewModeSwitchStyles(
+  colors: MobileThemeColors,
+  chrome: MobileEinkChrome
+) {
+  return StyleSheet.create({
+    switch: {
+      minHeight: 28,
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 2,
+      gap: 2,
+      ...chrome.sectionCard
+    },
+    button: {
+      minHeight: 24,
+      minWidth: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.sm,
+      ...chrome.filterChip(false)
+    },
+    buttonPressed: {
+      ...chrome.listRowPressed
+    },
+    buttonSelected: {
+      ...chrome.filterChip(true)
+    },
+    buttonText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600'
+    },
+    buttonTextSelected: {
+      color: colors.textPrimary
+    },
+    disabled: {
+      opacity: 0.35
+    }
+  })
+}

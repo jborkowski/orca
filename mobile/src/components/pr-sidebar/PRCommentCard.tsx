@@ -1,14 +1,14 @@
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Image, Linking, Pressable, Text, View } from 'react-native'
 import { Check, CornerDownRight, ExternalLink, Pencil, Trash2, Undo2 } from 'lucide-react-native'
 import type { GitHubReaction, GitHubReactionContent, PRComment } from '../../../../src/shared/types'
-import { colors } from '../../theme/mobile-theme'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import { canEditComment, isResolvableComment } from '../../session/pr-comment-actions'
 import { ConfirmModal } from '../ConfirmModal'
 import { CommentMarkdown } from './CommentMarkdown'
 import { PRCommentComposer } from './PRCommentComposer'
 import { formatPrCommentRelativeTime } from './pr-comment-time'
-import { prCommentsStyles as styles } from './pr-comments-styles'
+import { createPrCommentsStyles } from './pr-comments-styles'
 
 export type PRCommentRepoSlug = { owner: string; repo: string }
 
@@ -38,7 +38,13 @@ const REACTION_EMOJI: Record<GitHubReactionContent, string> = {
   eyes: '👀'
 }
 
-function Reactions({ reactions }: { reactions?: GitHubReaction[] }) {
+function Reactions({
+  reactions,
+  styles
+}: {
+  reactions?: GitHubReaction[]
+  styles: ReturnType<typeof createPrCommentsStyles>
+}) {
   const visible = (reactions ?? []).filter((r) => r.count > 0)
   if (visible.length === 0) {
     return null
@@ -68,6 +74,8 @@ export const PRCommentCard = memo(function PRCommentCard({
   isReply?: boolean
   actions?: PRCommentCardActions
 }) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createPrCommentsStyles(colors, chrome), [colors, chrome])
   const [replyOpen, setReplyOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -160,7 +168,7 @@ export const PRCommentCard = memo(function PRCommentCard({
       ) : (
         <View style={styles.body}>
           <CommentMarkdown content={comment.body} />
-          <Reactions reactions={comment.reactions} />
+          <Reactions reactions={comment.reactions} styles={styles} />
         </View>
       )}
       {actions && !editOpen ? (

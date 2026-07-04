@@ -1,7 +1,8 @@
 import { Pressable, Text, View } from 'react-native'
 import { ArrowDown, ArrowUp } from 'lucide-react-native'
 import type { DiffComment } from '../../../src/shared/types'
-import { colors } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { MobileDiffReviewQueueItem } from '../session/mobile-diff-review-queue'
 import { MOBILE_GIT_STATUS_LABELS } from '../source-control/mobile-git-status'
 import {
@@ -9,7 +10,7 @@ import {
   mobileReviewScopeLabel,
   type ReviewDiffState
 } from '../session/mobile-diff-review-screen-model'
-import { mobileDiffReviewStyles as styles } from './mobile-diff-review-screen-styles'
+import { useMobileDiffReviewStyles } from './mobile-diff-review-screen-styles'
 
 type Props = {
   currentIndex: number
@@ -22,7 +23,7 @@ type Props = {
   onJumpHunk: (direction: 'next' | 'previous') => void
 }
 
-function statusColor(status: MobileDiffReviewQueueItem['status']): string {
+function statusColor(status: MobileDiffReviewQueueItem['status'], colors: MobileThemeColors): string {
   switch (status) {
     case 'added':
     case 'copied':
@@ -49,8 +50,10 @@ export function MobileDiffReviewFileSummary({
   onEditNote,
   onJumpHunk
 }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   const hunkDisabled = diffState.kind !== 'ready' || diffState.hunks.length === 0
-  const badgeColor = statusColor(item.status)
+  const badgeColor = statusColor(item.status, colors)
   return (
     <View style={styles.fileHeader}>
       <View style={styles.fileTitleRow}>

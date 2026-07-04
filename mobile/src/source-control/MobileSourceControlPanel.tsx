@@ -1,12 +1,12 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { useMobileSourceControlState } from './use-mobile-source-control-state'
 import { useMobileSourceControlActionSheet } from './use-mobile-source-control-action-sheet'
 import { MobileSourceControlHeader } from './MobileSourceControlHeader'
 import { MobileSourceControlContent } from './MobileSourceControlContent'
 import { MobileSourceControlModals } from './MobileSourceControlModals'
-import { styles } from './mobile-source-control-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 export type MobileSourceControlPanelProps = {
   hostId: string
@@ -30,6 +30,8 @@ export function MobileSourceControlPanel({
   onFileOpenStart,
   onOpenedFileDiff
 }: MobileSourceControlPanelProps) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const state = useMobileSourceControlState({
     hostId,
     worktreeId,

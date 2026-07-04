@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight } from 'lucide-react-native'
 import type { GitHubWorkItemDetails, PRState } from '../../../../src/shared/types'
 import type { GitHubPrRepoSlug } from '../../session/github-pr-rpc'
-import { colors } from '../../theme/mobile-theme'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
 import { canAddRootComment } from '../../session/pr-comment-actions'
 import type { MobilePrCommentActions } from '../../session/use-mobile-pr-comment-actions'
 import { PRSection } from './PRSection'
@@ -25,8 +26,8 @@ import {
   isResolvedPRCommentGroup,
   type PRCommentGroup
 } from './pr-comment-groups'
-import { prCommentsStyles as styles } from './pr-comments-styles'
-import { mobilePrSidebarStyles as shared } from './mobile-pr-sidebar-styles'
+import { createPrCommentsStyles } from './pr-comments-styles'
+import { createMobilePrSidebarStyles } from './mobile-pr-sidebar-styles'
 
 type Props = {
   details: GitHubWorkItemDetails | null
@@ -49,6 +50,9 @@ const COMMENT_PAGE = 12
 // card, then a Comments section with an audience filter (PRs only), threaded
 // review comments, reactions, and collapsible resolved threads.
 export function PRCommentsSection({ details, prState, prRepo, actions }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createPrCommentsStyles(colors, chrome), [colors, chrome])
+  const shared = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
   // details is null while phase 2 (the heavy comments/body payload) is still loading.
   const loadingDetails = details === null
   const body = details?.body ?? ''
@@ -155,6 +159,9 @@ export function PRCommentsSection({ details, prState, prRepo, actions }: Props) 
                         key={getPRCommentGroupId(group)}
                         group={group}
                         actions={cardActions}
+                        styles={styles}
+                        shared={shared}
+                        colors={colors}
                       />
                     ))}
                     {remaining > 0 ? (
@@ -193,10 +200,16 @@ export function PRCommentsSection({ details, prState, prRepo, actions }: Props) 
 
 function CommentGroupView({
   group,
-  actions
+  actions,
+  styles,
+  shared,
+  colors
 }: {
   group: PRCommentGroup
   actions?: PRCommentCardActions
+  styles: ReturnType<typeof createPrCommentsStyles>
+  shared: ReturnType<typeof createMobilePrSidebarStyles>
+  colors: MobileThemeColors
 }) {
   const [expanded, setExpanded] = useState(false)
   const cards =

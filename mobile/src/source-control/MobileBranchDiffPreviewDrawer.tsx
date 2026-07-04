@@ -1,11 +1,11 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { X } from 'lucide-react-native'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { BottomDrawer } from '../components/BottomDrawer'
 import { MobileSyntaxSegments } from '../components/MobileSyntaxSegments'
 import { mobileDiffLineNumber, mobileDiffLinePrefix } from './mobile-diff-format'
 import type { MobileBranchDiffPreviewState } from './mobile-source-control-screen-state'
-import { styles } from './mobile-source-control-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 type Props = {
   branchDiffPreview: MobileBranchDiffPreviewState | null
@@ -13,6 +13,8 @@ type Props = {
 }
 
 export function MobileBranchDiffPreviewDrawer({ branchDiffPreview, onClose }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   if (!branchDiffPreview) {
     return null
   }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import {
   TerminalWebView,
@@ -7,6 +7,8 @@ import {
   type TerminalModes,
   type TerminalWebViewHandle
 } from '../terminal/TerminalWebView'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import { resolveMobileTerminalTheme } from '../theme/resolve-mobile-terminal-theme'
 
 type TerminalPaneViewProps = {
   handle: string
@@ -49,6 +51,12 @@ export function TerminalPaneView({
   onOpenUrl,
   onTextScaleChange
 }: TerminalPaneViewProps) {
+  const { isEinkMode } = useMobileTheme()
+  const resolvedTerminalTheme = useMemo(
+    () => resolveMobileTerminalTheme(isEinkMode, terminalTheme),
+    [isEinkMode, terminalTheme]
+  )
+
   const setRef = useCallback(
     (ref: TerminalWebViewHandle | null) => {
       onRef(handle, ref)
@@ -70,7 +78,8 @@ export function TerminalPaneView({
       <TerminalWebView
         ref={setRef}
         style={styles.terminalWebView}
-        terminalTheme={terminalTheme}
+        terminalTheme={resolvedTerminalTheme}
+        disableWebgl={isEinkMode}
         textScale={textScale}
         onWebReady={() => onWebReady(handle)}
         onSelectionMode={(a) => onSelectionMode(handle, a)}

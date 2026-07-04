@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { ArrowRight, Pencil } from 'lucide-react-native'
-import { colors } from '../../theme/mobile-theme'
 import type { GitHubWorkItemDetails, PRInfo } from '../../../../src/shared/types'
 import type { MobilePrTitleAction } from '../../session/use-mobile-pr-title-action'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import { prStateBadge } from './pr-checks-presentation'
 import { statusColor } from './pr-sidebar-status-color'
 import { canEditPRTitle } from '../../session/pr-title-edit'
 import { openMobilePrUrl } from '../MobilePrComposeSheet'
-import { mobilePrSidebarStyles as styles } from './mobile-pr-sidebar-styles'
-import { prCommentComposerStyles as composerStyles } from './pr-comment-composer-styles'
+import { createMobilePrSidebarStyles } from './mobile-pr-sidebar-styles'
+import { createPrCommentComposerStyles } from './pr-comment-composer-styles'
 
 type Props = {
   pr: PRInfo
@@ -21,6 +22,12 @@ type Props = {
 // Header: state badge (incl. draft — display-only), title, author, head->base.
 // The title is inline-editable on an open/draft PR (desktop parity).
 export function PRSidebarHeader({ pr, details, titleAction }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+  const composerStyles = useMemo(
+    () => createPrCommentComposerStyles(colors, chrome),
+    [colors, chrome]
+  )
   const item = details?.item
   const badge = prStateBadge(pr.state)
   const badgeColor = statusColor(badge.token)
@@ -55,6 +62,9 @@ export function PRSidebarHeader({ pr, details, titleAction }: Props) {
           editable={editable}
           openPr={openPr}
           titleAction={titleAction}
+          styles={styles}
+          composerStyles={composerStyles}
+          colors={colors}
         />
         {author ? <Text style={styles.prMeta}>by {author}</Text> : null}
         {baseRef && headRef ? (
@@ -75,13 +85,19 @@ function PRTitle({
   number,
   editable,
   openPr,
-  titleAction
+  titleAction,
+  styles,
+  composerStyles,
+  colors
 }: {
   title: string
   number: number
   editable: boolean
   openPr: (() => void) | undefined
   titleAction: MobilePrTitleAction
+  styles: ReturnType<typeof createMobilePrSidebarStyles>
+  composerStyles: ReturnType<typeof createPrCommentComposerStyles>
+  colors: MobileThemeColors
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)

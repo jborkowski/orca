@@ -11,8 +11,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { MobileDiffReviewQueueItem } from '../session/mobile-diff-review-queue'
 import type { GitMutationMethod } from '../session/mobile-diff-review-screen-model'
-import { colors, spacing } from '../theme/mobile-theme'
-import { mobileDiffReviewStyles as styles } from './mobile-diff-review-screen-styles'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileDiffReviewStyles } from './mobile-diff-review-screen-styles'
 
 type Props = {
   busyAction: string | null
@@ -33,6 +34,8 @@ export function MobileDiffReviewFooter({
   onMarkReviewed,
   onMoveFile
 }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   const insets = useSafeAreaInsets()
   return (
     <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.sm }]}>
@@ -102,7 +105,7 @@ export function MobileDiffReviewFooter({
           accessibilityRole="button"
           accessibilityLabel="Mark file reviewed"
         >
-          <Check size={14} color={colors.bgBase} strokeWidth={2.2} />
+          <Check size={14} color={colors.onSurfaceBright} strokeWidth={2.2} />
           <Text style={styles.primaryButtonText}>
             {item.isReviewed ? 'Reviewed' : 'Mark Reviewed'}
           </Text>

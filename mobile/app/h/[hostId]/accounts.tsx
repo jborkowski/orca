@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -14,8 +14,9 @@ import { ChevronLeft, Check, RefreshCw, User } from 'lucide-react-native'
 import { loadHosts } from '../../../src/transport/host-store'
 import { useHostClient } from '../../../src/transport/client-context'
 import type { RpcSuccess } from '../../../src/transport/types'
-import { colors, spacing } from '../../../src/theme/mobile-theme'
-import { styles } from './accounts-screen-styles'
+import { spacing } from '../../../src/theme/mobile-theme'
+import { useMobileTheme } from '../../../src/theme/mobile-theme-context'
+import { createAccountsScreenStyles } from './accounts-screen-styles'
 import { ClaudeIcon, OpenAIIcon } from '../../../src/components/AgentIcons'
 import {
   type AccountsSnapshot,
@@ -30,6 +31,8 @@ import {
 export default function AccountsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createAccountsScreenStyles(colors, chrome), [colors, chrome])
   const { hostId } = useLocalSearchParams<{ hostId: string }>()
 
   // Why: shared client per host. See docs/mobile-shared-client-per-host.md.

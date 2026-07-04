@@ -2,14 +2,14 @@ import { useMemo } from 'react'
 import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native'
 import { Check, Copy, FileText, Plus, Send, Trash2, X } from 'lucide-react-native'
 import type { DiffComment } from '../../../src/shared/types'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { ActionSheetAction } from './ActionSheetModal'
 import { ActionSheetModal } from './ActionSheetModal'
 import { BottomDrawer } from './BottomDrawer'
 import { ConfirmModal } from './ConfirmModal'
 import { mobileReviewCountLabel } from '../session/mobile-diff-review-screen-model'
 import type { useMobileDiffReviewController } from '../session/use-mobile-diff-review-controller'
-import { mobileDiffReviewStyles as styles } from './mobile-diff-review-screen-styles'
+import { useMobileDiffReviewStyles } from './mobile-diff-review-screen-styles'
 
 type Props = {
   controller: ReturnType<typeof useMobileDiffReviewController>
@@ -161,6 +161,8 @@ function sendSheetMessage(
 }
 
 function NoteComposerDrawer({ controller }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   const composer = controller.composer
   return (
     <BottomDrawer visible={composer !== null} onClose={controller.closeComposer}>
@@ -215,6 +217,8 @@ function composerLabel(
 }
 
 function DeleteNoteButton({ onPress }: { onPress: () => Promise<void> }) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   return (
     <Pressable
       style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
@@ -235,6 +239,8 @@ function SaveNoteButton({
   controller: ReturnType<typeof useMobileDiffReviewController>
   composer: ReturnType<typeof useMobileDiffReviewController>['composer']
 }) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   const disabled = controller.composerBody.trim().length === 0
   return (
     <Pressable
@@ -248,13 +254,15 @@ function SaveNoteButton({
       accessibilityRole="button"
       accessibilityLabel={composerLabel(composer)}
     >
-      <Check size={14} color={colors.bgBase} strokeWidth={2.2} />
+      <Check size={14} color={colors.onSurfaceBright} strokeWidth={2.2} />
       <Text style={styles.primaryButtonText}>Save</Text>
     </Pressable>
   )
 }
 
 function CompletionDrawer({ controller }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   const noteCount =
     controller.screenState.kind === 'ready' ? controller.screenState.comments.length : 0
   return (
@@ -285,7 +293,7 @@ function CompletionDrawer({ controller }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Send notes to agent"
         >
-          <Send size={14} color={colors.bgBase} strokeWidth={2.2} />
+          <Send size={14} color={colors.onSurfaceBright} strokeWidth={2.2} />
           <Text style={styles.primaryButtonText}>Send Notes</Text>
         </Pressable>
       </View>

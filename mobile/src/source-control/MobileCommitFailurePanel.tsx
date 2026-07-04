@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react-native'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { MobileCommitFailureRecovery } from './mobile-commit-failure-recovery'
 import type { MobileCommitFailureRecoveryAction } from './use-mobile-commit-failure-recovery'
-import { styles } from './mobile-source-control-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 type Props = {
   failure: MobileCommitFailureRecovery
@@ -12,6 +12,8 @@ type Props = {
 }
 
 export function MobileCommitFailurePanel({ failure, action }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const [expanded, setExpanded] = useState(false)
   const Chevron = expanded ? ChevronDown : ChevronRight
   const detailsText = failure.error.trim()

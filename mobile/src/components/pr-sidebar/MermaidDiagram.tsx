@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { WebView } from 'react-native-webview'
-import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
+import { radii, spacing, typography } from '../../theme/mobile-theme'
+import type { MobileEinkChrome } from '../../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 
 type Props = {
   source: string
@@ -14,12 +17,14 @@ type Props = {
 // height so we can size to content. On any failure (no network, parse error,
 // render error) we fall back to the raw source in a labeled mono code box.
 export function MermaidDiagram({ source, base }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMermaidDiagramStyles(colors, chrome), [colors, chrome])
   const [height, setHeight] = useState(0)
   const [failed, setFailed] = useState(false)
-  const html = useMemo(() => buildHtml(source), [source])
+  const html = useMemo(() => buildHtml(source, colors), [source, colors])
 
   if (failed) {
-    return <MermaidFallback source={source} base={base} />
+    return <MermaidFallback source={source} base={base} styles={styles} />
   }
 
   return (
@@ -60,7 +65,11 @@ export function MermaidDiagram({ source, base }: Props) {
   )
 }
 
-function MermaidFallback({ source, base }: Props) {
+function MermaidFallback({
+  source,
+  base,
+  styles
+}: Props & { styles: ReturnType<typeof createMermaidDiagramStyles> }) {
   return (
     <View style={styles.frame}>
       <View style={styles.label}>
@@ -74,16 +83,18 @@ function MermaidFallback({ source, base }: Props) {
 }
 
 // Self-contained HTML: load mermaid from CDN, render the graph, post the body
-// height (or "error") back to RN. Theme variables match the dark sidebar palette.
-function buildHtml(source: string): string {
+// height (or "error") back to RN. Theme variables match the active sidebar palette.
+function buildHtml(source: string, colors: MobileThemeColors): string {
   // JSON.stringify safely escapes the user's diagram source for embedding.
   const encoded = JSON.stringify(source)
+  const panelBg = colors.bgPanel
+  const raisedBg = colors.bgRaised
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <style>
-  html, body { margin: 0; padding: 0; background: ${colors.bgRaised}; }
+  html, body { margin: 0; padding: 0; background: ${raisedBg}; }
   #c { padding: 8px; }
   #c svg { max-width: 100%; height: auto; }
 </style>
@@ -106,8 +117,8 @@ function buildHtml(source: string): string {
       securityLevel: 'strict',
       darkMode: true,
       themeVariables: {
-        background: '${colors.bgRaised}',
-        primaryColor: '${colors.bgPanel}',
+        background: '${raisedBg}',
+        primaryColor: '${panelBg}',
         primaryTextColor: '${colors.textPrimary}',
         lineColor: '${colors.textSecondary}',
         textColor: '${colors.textPrimary}'
@@ -124,28 +135,27 @@ function buildHtml(source: string): string {
 </html>`
 }
 
-const styles = StyleSheet.create({
-  frame: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.row,
-    marginBottom: spacing.sm,
-    overflow: 'hidden',
-    backgroundColor: colors.bgRaised
-  },
-  label: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel
-  },
-  labelText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontFamily: typography.monoFamily
-  },
-  webview: { backgroundColor: colors.bgRaised },
-  fallbackScroll: { padding: spacing.sm },
-  fallbackText: { color: colors.textPrimary, fontFamily: typography.monoFamily }
-})
+function createMermaidDiagramStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    frame: {
+      ...chrome.sectionCard,
+      borderRadius: radii.row,
+      marginBottom: spacing.sm
+    },
+    label: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderSubtle,
+      backgroundColor: chrome.sectionCard.backgroundColor
+    },
+    labelText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontFamily: typography.monoFamily
+    },
+    webview: { backgroundColor: chrome.listRowPressed.backgroundColor },
+    fallbackScroll: { padding: spacing.sm },
+    fallbackText: { color: colors.textPrimary, fontFamily: typography.monoFamily }
+  })
+}

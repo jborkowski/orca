@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { Check, Download } from 'lucide-react-native'
 import { BottomDrawer } from './BottomDrawer'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { RpcClient } from '../transport/rpc-client'
 import { triggerError, triggerSuccess } from '../platform/haptics'
 import {
@@ -34,6 +37,8 @@ function formatSize(bytes: number | null): string {
 // Lets the user enable dictation and download a speech model on the paired
 // desktop, from the phone. Polls while a download is in flight.
 export function MobileDictationSetupSheet({ visible, client, onClose, onReady }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileDictationSetupSheetStyles(colors, chrome), [colors, chrome])
   const [setup, setSetup] = useState<MobileSpeechSetup | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -226,58 +231,58 @@ export function MobileDictationSetupSheet({ visible, client, onClose, onReady }:
   )
 }
 
-const styles = StyleSheet.create({
-  heading: {
-    color: colors.textPrimary,
-    fontSize: typography.bodySize,
-    fontWeight: '700'
-  },
-  subtitle: {
-    color: colors.textSecondary,
-    fontSize: typography.metaSize,
-    marginTop: spacing.xs,
-    marginBottom: spacing.md
-  },
-  loading: { paddingVertical: spacing.xl, alignItems: 'center' },
-  enableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-    marginBottom: spacing.sm
-  },
-  enableLabel: { color: colors.textPrimary, fontSize: typography.bodySize },
-  modelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  modelInfo: { flex: 1, minWidth: 0 },
-  modelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  modelLabel: { color: colors.textPrimary, fontSize: typography.bodySize },
-  recommended: {
-    color: colors.statusGreen,
-    fontSize: 10,
-    fontWeight: '700'
-  },
-  modelMeta: { color: colors.textMuted, fontSize: typography.metaSize, marginTop: 2 },
-  modelStateText: { color: colors.textMuted, fontSize: typography.metaSize },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.button,
-    backgroundColor: colors.bgRaised
-  },
-  actionPressed: { opacity: 0.7 },
-  actionText: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
-  selectedTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  selectedText: { color: colors.statusGreen, fontSize: typography.metaSize, fontWeight: '600' },
-  error: { color: colors.statusRed, fontSize: typography.metaSize, marginTop: spacing.md }
-})
+function createMobileDictationSetupSheetStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    heading: {
+      color: colors.textPrimary,
+      fontSize: typography.bodySize,
+      fontWeight: '700'
+    },
+    subtitle: {
+      color: colors.textSecondary,
+      fontSize: typography.metaSize,
+      marginTop: spacing.xs,
+      marginBottom: spacing.md
+    },
+    loading: { paddingVertical: spacing.xl, alignItems: 'center' },
+    enableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderSubtle,
+      marginBottom: spacing.sm
+    },
+    enableLabel: { color: colors.textPrimary, fontSize: typography.bodySize },
+    modelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      paddingVertical: spacing.sm
+    },
+    modelInfo: { flex: 1, minWidth: 0 },
+    modelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    modelLabel: { color: colors.textPrimary, fontSize: typography.bodySize },
+    recommended: {
+      color: colors.statusGreen,
+      fontSize: 10,
+      fontWeight: '700'
+    },
+    modelMeta: { color: colors.textMuted, fontSize: typography.metaSize, marginTop: 2 },
+    modelStateText: { color: colors.textMuted, fontSize: typography.metaSize },
+    actionButton: {
+      ...chrome.outlineButton,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 6
+    },
+    actionPressed: { opacity: 0.7 },
+    actionText: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
+    selectedTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    selectedText: { color: colors.statusGreen, fontSize: typography.metaSize, fontWeight: '600' },
+    error: { color: colors.statusRed, fontSize: typography.metaSize, marginTop: spacing.md }
+  })
+}

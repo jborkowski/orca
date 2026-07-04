@@ -29,6 +29,8 @@ export type {
 type Props = {
   style?: StyleProp<ViewStyle>
   terminalTheme?: MobileTerminalTheme
+  // Why: e-ink panels use the DOM renderer to avoid WebGL refresh artifacts.
+  disableWebgl?: boolean
   // Why: baseline zoom multiplier ("text size") applied on top of the fit-to-width
   // scale; raw xterm fontSize can't drive apparent size because the fit cancels it.
   textScale?: number
@@ -40,6 +42,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   {
     style,
     terminalTheme,
+    disableWebgl = false,
     textScale = 1,
     onWebReady,
     onEngineError,
@@ -62,6 +65,8 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   const pendingMessages = useMemo(() => createTerminalWebViewPendingMessages(), [])
   const messageIdRef = useRef(0)
   const terminalThemeKey = useMemo(() => JSON.stringify(terminalTheme ?? null), [terminalTheme])
+  const disableWebglRef = useRef(disableWebgl)
+  disableWebglRef.current = disableWebgl
   const measureResolveRef = useRef<
     ((result: { cols: number; rows: number } | null) => void) | null
   >(null)
@@ -287,7 +292,8 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
           oscLinks,
           terminalTheme,
           fontScale: textScale,
-          preserveScroll
+          preserveScroll,
+          disableWebgl: disableWebglRef.current
         })
       },
       resize(cols: number, rows: number) {

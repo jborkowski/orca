@@ -2,6 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const PINS_PREFIX = 'orca:pins:'
 const NOTIF_KEY = 'orca:pushNotificationsEnabled'
+const EINK_DISPLAY_MODE_KEY = 'orca:einkDisplayMode'
+
+export async function loadEinkDisplayMode(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(EINK_DISPLAY_MODE_KEY)
+    return raw === 'true'
+  } catch {
+    return false
+  }
+}
+
+export async function saveEinkDisplayMode(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(EINK_DISPLAY_MODE_KEY, String(enabled))
+}
 
 // Why: default-off so the iOS notification permission prompt never
 // fires until the user explicitly opts in via Settings → Notifications.

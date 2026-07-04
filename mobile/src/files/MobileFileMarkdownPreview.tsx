@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { Code, Pencil } from 'lucide-react-native'
 import { MobileMarkdown } from '../components/MobileMarkdown'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import {
   MobileFilePreviewSourceText,
   MobileFilePreviewTruncatedNote
 } from './MobileFilePreviewSourceText'
-import { filePreviewStyles as styles } from './mobile-file-preview-styles'
+import { createMobileFilePreviewStyles } from './mobile-file-preview-styles'
 
 type Props = {
   relativePath: string
@@ -24,6 +24,8 @@ export function MobileFileMarkdownPreview({
   byteLength,
   initialLine
 }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFilePreviewStyles(colors, chrome), [colors, chrome])
   const [mode, setMode] = useState<'preview' | 'source'>(() => (initialLine ? 'source' : 'preview'))
   useEffect(() => {
     setMode(initialLine ? 'source' : 'preview')

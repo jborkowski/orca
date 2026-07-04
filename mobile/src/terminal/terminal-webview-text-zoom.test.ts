@@ -156,6 +156,16 @@ describe('TerminalWebView text zoom', () => {
     expect(terminalHtmlSource).toContain('new window.WebglAddon.WebglAddon()')
   })
 
+  it('skips WebGL when disableWebgl is set on init', () => {
+    expect(terminalHtmlSource).toContain('disableWebgl')
+    expect(terminalHtmlSource).toContain('!disableWebgl && window.WebglAddon')
+    const initStart = terminalHtmlSource.indexOf('function init(')
+    const handleInit = terminalHtmlSource.indexOf("if (msg.type === 'init') {")
+    expect(initStart).toBeGreaterThanOrEqual(0)
+    expect(handleInit).toBeGreaterThan(initStart)
+    expect(terminalHtmlSource.slice(handleInit, handleInit + 220)).toContain('msg.disableWebgl')
+  })
+
   const IOS_IPHONE_NAVIGATOR = {
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15',
     platform: 'iPhone',
