@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
-import { ArrowRight, ExternalLink, Pencil } from 'lucide-react-native'
-import { colors } from '../../theme/mobile-theme'
+import { ArrowRight, Pencil } from 'lucide-react-native'
 import type { GitHubWorkItemDetails, PRInfo } from '../../../../src/shared/types'
 import type { MobilePrTitleAction } from '../../session/use-mobile-pr-title-action'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import { prStateBadge } from './pr-checks-presentation'
 import { statusColor } from './pr-sidebar-status-color'
 import { canEditPRTitle } from '../../session/pr-title-edit'
 import { openMobilePrUrl } from '../MobilePrComposeSheet'
-import { mobilePrSidebarStyles as styles } from './mobile-pr-sidebar-styles'
-import { prCommentComposerStyles as composerStyles } from './pr-comment-composer-styles'
+import { createMobilePrSidebarStyles } from './mobile-pr-sidebar-styles'
+import { createPrCommentComposerStyles } from './pr-comment-composer-styles'
 
 type Props = {
   pr: PRInfo
@@ -22,15 +23,15 @@ type Props = {
   bare?: boolean
 }
 
-// Compact identity: state + # + author on one meta row, title, head→base.
-// # lives only in the meta row (not also after the title) to avoid repetition.
-export function PRSidebarHeader({
-  pr,
-  details,
-  titleAction,
-  showOpenOnWeb = true,
-  bare = false
-}: Props) {
+// Header: state badge (incl. draft — display-only), title, author, head->base.
+// The title is inline-editable on an open/draft PR (desktop parity).
+export function PRSidebarHeader({ pr, details, titleAction }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+  const composerStyles = useMemo(
+    () => createPrCommentComposerStyles(colors, chrome),
+    [colors, chrome]
+  )
   const item = details?.item
   const badge = prStateBadge(pr.state)
   const badgeColor = statusColor(badge.token)
@@ -41,43 +42,40 @@ export function PRSidebarHeader({
   const editable = canEditPRTitle(pr.state)
   const openPr = pr.url ? () => openMobilePrUrl(pr.url) : undefined
 
-  const body = (
-    <>
-      <View style={styles.metaRow}>
-        <View style={styles.metaLeft}>
-          <Pressable
-            onPress={openPr}
-            disabled={!openPr}
-            accessibilityRole="link"
-            accessibilityLabel={`Open pull request #${pr.number} on the web`}
-            style={({ pressed }) => [
-              styles.badge,
-              { borderColor: badgeColor },
-              pressed && { opacity: 0.6 }
-            ]}
-          >
-            <Text style={[styles.badgeText, { color: badgeColor }]}>{badge.label}</Text>
-          </Pressable>
-          <Text
-            style={styles.prMetaStrong}
-            onPress={openPr}
-            accessibilityRole="link"
-            accessibilityLabel={`Open pull request #${pr.number} on the web`}
-          >
-            #{pr.number}
-          </Text>
-          {author ? <Text style={styles.prMeta}>· {author}</Text> : null}
-        </View>
-        {showOpenOnWeb && openPr ? (
-          <Pressable
-            onPress={openPr}
-            hitSlop={8}
-            accessibilityRole="link"
-            accessibilityLabel={`Open pull request #${pr.number} in browser`}
-            style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.6 }]}
-          >
-            <ExternalLink size={16} color={colors.textSecondary} strokeWidth={2.2} />
-          </Pressable>
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionBody}>
+        <Pressable
+          onPress={openPr}
+          disabled={!openPr}
+          accessibilityRole="link"
+          accessibilityLabel={`Open pull request #${pr.number} on the web`}
+          style={({ pressed }) => [
+            styles.badge,
+            { borderColor: badgeColor },
+            pressed && { opacity: 0.6 }
+          ]}
+        >
+          <Text style={[styles.badgeText, { color: badgeColor }]}>{badge.label}</Text>
+        </Pressable>
+        <PRTitle
+          title={title}
+          number={pr.number}
+          editable={editable}
+          openPr={openPr}
+          titleAction={titleAction}
+          styles={styles}
+          composerStyles={composerStyles}
+          colors={colors}
+        />
+        {author ? <Text style={styles.prMeta}>by {author}</Text> : null}
+        {baseRef && headRef ? (
+          // head -> base reads in merge direction (desktop ChecksPanel parity).
+          <View style={styles.branchRow}>
+            <Text style={styles.branchPill}>{headRef}</Text>
+            <ArrowRight size={12} color={colors.textSecondary} strokeWidth={2.2} />
+            <Text style={styles.branchPill}>{baseRef}</Text>
+          </View>
         ) : null}
       </View>
       <PRTitle title={title} editable={editable} titleAction={titleAction} />
@@ -108,11 +106,18 @@ export function PRSidebarHeader({
 function PRTitle({
   title,
   editable,
-  titleAction
+  openPr,
+  titleAction,
+  styles,
+  composerStyles,
+  colors
 }: {
   title: string
   editable: boolean
   titleAction: MobilePrTitleAction
+  styles: ReturnType<typeof createMobilePrSidebarStyles>
+  composerStyles: ReturnType<typeof createPrCommentComposerStyles>
+  colors: MobileThemeColors
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(title)

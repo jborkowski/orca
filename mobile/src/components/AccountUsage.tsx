@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
-import { colors, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 
 // Pure types and selectors live in account-usage-state.ts (no RN imports) so
 // they are unit-testable; re-exported here so existing import sites are stable.
@@ -35,9 +38,9 @@ export function UsageBar({
   unavailable: boolean
   loading?: boolean
 }) {
-  // Why: round then clamp so bar width, color, and label share one value (desktop parity).
-  const used = usedPercent == null ? null : Math.max(0, Math.min(100, Math.round(usedPercent)))
-  // Why: same consumption bands as desktop barColor (green <60, amber <80, red ≥80).
+  const { colors } = useMobileTheme()
+  const styles = useMemo(() => createUsageBarStyles(colors), [colors])
+  const remaining = usedPercent == null ? null : Math.max(0, Math.min(100, 100 - usedPercent))
   const barColor =
     used == null
       ? colors.textMuted
@@ -69,36 +72,40 @@ export function UsageBar({
   )
 }
 
-const styles = StyleSheet.create({
-  usageBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1
-  },
-  usageLabel: {
-    fontSize: typography.metaSize,
-    color: colors.textMuted,
-    width: 22
-  },
-  usageTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.bgRaised,
-    overflow: 'hidden'
-  },
-  usageFill: {
-    height: '100%',
-    borderRadius: 3
-  },
-  usageValue: {
-    fontSize: typography.metaSize,
-    color: colors.textSecondary,
-    width: 36,
-    textAlign: 'right'
-  },
-  usageSpinner: {
-    width: 36
-  }
-})
+function createUsageBarStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    usageBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      flex: 1
+    },
+    usageLabel: {
+      fontSize: typography.metaSize,
+      color: colors.textMuted,
+      width: 22
+    },
+    usageTrack: {
+      flex: 1,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.bgRaised,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+      overflow: 'hidden'
+    },
+    usageFill: {
+      height: '100%',
+      borderRadius: 3
+    },
+    usageValue: {
+      fontSize: typography.metaSize,
+      color: colors.textSecondary,
+      width: 36,
+      textAlign: 'right'
+    },
+    usageSpinner: {
+      width: 36
+    }
+  })
+}

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { ScrollView, Text } from 'react-native'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { MobileSyntaxSegments } from '../components/MobileSyntaxSegments'
 import { formatPreviewByteLength } from './mobile-file-preview-request'
 import { scrollOffsetForPreviewLine } from './mobile-file-preview-line-column'
 import { buildMobileFilePreviewSyntax } from './mobile-file-preview-syntax'
-import { filePreviewStyles as styles } from './mobile-file-preview-styles'
+import { createMobileFilePreviewStyles } from './mobile-file-preview-styles'
 
 export function MobileFilePreviewSourceText({
   relativePath,
@@ -19,6 +20,8 @@ export function MobileFilePreviewSourceText({
   byteLength?: number
   initialLine?: number
 }) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFilePreviewStyles(colors, chrome), [colors, chrome])
   const scrollRef = useRef<ScrollView>(null)
   const revealedRef = useRef(false)
   const syntax = useMemo(
@@ -59,6 +62,8 @@ export function MobileFilePreviewSourceText({
 }
 
 export function MobileFilePreviewTruncatedNote({ byteLength }: { byteLength: number }) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFilePreviewStyles(colors, chrome), [colors, chrome])
   return (
     <Text style={styles.truncatedNote}>
       Preview truncated. File size: {formatPreviewByteLength(byteLength)}.

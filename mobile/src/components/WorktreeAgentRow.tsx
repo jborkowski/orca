@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { agentDisplayLabel, agentDotState, formatTimeAgo } from '../worktree/agent-row-display'
 import { AgentStateDot } from './AgentStateDot'
 import { MobileAgentIcon } from './MobileAgentIcon'
@@ -19,6 +22,8 @@ type Props = {
 // One inline agent row: state dot → identity → last message/prompt → time ago.
 // Mirrors desktop DashboardAgentRow's compact in-card layout.
 export function WorktreeAgentRow({ agent, depth, now, unvisited }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMemo(() => createWorktreeAgentRowStyles(colors), [colors])
   const dotState = agentDotState(agent, now)
   const label = agentDisplayLabel(agent, now)
   const ts = formatTimeAgo(agent.stateStartedAt, now)
@@ -26,8 +31,6 @@ export function WorktreeAgentRow({ agent, depth, now, unvisited }: Props) {
   return (
     <View style={[styles.row, { paddingLeft: depth * INDENT_PER_DEPTH }]}>
       <AgentStateDot state={dotState} />
-      {/* Agent identity logo (Claude/Codex/…), matching the desktop sidebar's
-          agent icons instead of a two-letter text code. */}
       {agent.agentType ? <MobileAgentIcon agentId={agent.agentType} size={13} /> : null}
       <Text style={[styles.label, unvisited && styles.labelUnvisited]} numberOfLines={1}>
         {label}
@@ -37,24 +40,26 @@ export function WorktreeAgentRow({ agent, depth, now, unvisited }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: 3
-  },
-  label: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.textMuted
-  },
-  labelUnvisited: {
-    color: colors.textPrimary,
-    fontWeight: '600'
-  },
-  time: {
-    fontSize: 10,
-    color: colors.textMuted
-  }
-})
+function createWorktreeAgentRowStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: 3
+    },
+    label: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.textMuted
+    },
+    labelUnvisited: {
+      color: colors.textPrimary,
+      fontWeight: '600'
+    },
+    time: {
+      fontSize: 10,
+      color: colors.textMuted
+    }
+  })
+}

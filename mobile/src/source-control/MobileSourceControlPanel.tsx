@@ -1,24 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { useMobileSourceControlState } from './use-mobile-source-control-state'
 import { useMobileSourceControlActionSheet } from './use-mobile-source-control-action-sheet'
 import { MobileSourceControlHeader } from './MobileSourceControlHeader'
 import { MobileSourceControlContent } from './MobileSourceControlContent'
 import { MobileSourceControlModals } from './MobileSourceControlModals'
-import { MobileSourceControlSegments } from './MobileSourceControlSegments'
-import { MobileSourceControlBranchCard } from './MobileSourceControlBranchCard'
-import { MobileGitHistoryList } from './MobileGitHistoryList'
-import { styles } from './mobile-source-control-styles'
-import { hubStyles } from './mobile-source-control-hub-styles'
-import type { SourceControlHubTab } from './mobile-source-control-hub-tab'
-import { buildMobilePrChipSummary, countUnresolvedReviewThreads } from './mobile-pr-chip-summary'
-import { isMobileConflictAborting } from './mobile-source-control-conflict-abort'
-import { useMobilePrSidebarController } from '../session/use-mobile-pr-sidebar-controller'
-import { prSidebarDetailsNeedFetch } from '../session/mobile-pr-sidebar-state'
-import { MobilePrViewPanelBody } from '../components/pr-sidebar/MobilePrViewPanel'
-import { openMobilePrUrl } from '../components/MobilePrComposeSheet'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 export type MobileSourceControlPanelProps = {
   hostId: string
@@ -45,43 +34,8 @@ export function MobileSourceControlPanel({
   onFileOpenStart,
   onOpenedFileDiff
 }: MobileSourceControlPanelProps) {
-  const [activeTab, setActiveTab] = useState<SourceControlHubTab>(initialTab)
-  // Track first visit so Changes/History keep scroll state across segment switches
-  // without paying the mount cost until the user actually opens them. PR unmounts
-  // when inactive (WebViews / comment tree) but its controller state stays for the chip.
-  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SourceControlHubTab>>(
-    () => new Set<SourceControlHubTab>([initialTab])
-  )
-  const [historyRefreshNonce, setHistoryRefreshNonce] = useState(0)
-
-  // Deep-link / push with a different `tab` param should adopt the new segment
-  // (expo-router can reuse the screen instance when only query params change).
-  useEffect(() => {
-    setActiveTab(initialTab)
-    setVisitedTabs((prev) => {
-      if (prev.has(initialTab)) {
-        return prev
-      }
-      const next = new Set(prev)
-      next.add(initialTab)
-      return next
-    })
-  }, [initialTab])
-
-  const selectTab = useCallback((tab: SourceControlHubTab) => {
-    setActiveTab(tab)
-    setVisitedTabs((prev) => {
-      if (prev.has(tab)) {
-        return prev
-      }
-      const next = new Set(prev)
-      next.add(tab)
-      return next
-    })
-  }, [])
-  const openHistoryTab = useCallback(() => selectTab('history'), [selectTab])
-  const openPrTab = useCallback(() => selectTab('pr'), [selectTab])
-
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const state = useMobileSourceControlState({
     hostId,
     worktreeId,

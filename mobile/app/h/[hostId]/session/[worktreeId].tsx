@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
 import { Animated, AppState, Linking, type AppStateStatus } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import {
@@ -217,8 +217,14 @@ import {
   dismissMobileSessionCreateWarningState,
   reconcileMobileSessionCreateWarningState
 } from '../../../../src/session/mobile-session-create-warning-state'
-import { colors, spacing } from '../../../../src/theme/mobile-theme'
-import { styles } from './mobile-session-styles'
+import { spacing } from '../../../../src/theme/mobile-theme'
+import type { MobileEinkChrome } from '../../../../src/theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../../../../src/theme/mobile-theme-palettes'
+import { useMobileTheme } from '../../../../src/theme/mobile-theme-context'
+import { createMobileSessionFrameStyles } from './mobile-session-frame-styles'
+import { createMobileSessionReaderStyles } from './mobile-session-reader-styles'
+import { createMobileSessionCommandInputStyles } from './mobile-session-command-input-styles'
+import { createMobileSessionReviewCommentStyles } from './mobile-session-review-comment-styles'
 import type { DiffComment } from '../../../../../src/shared/types'
 import type {
   DiffCommentActions,
@@ -245,6 +251,36 @@ import type {
 type TerminalLiveAccessoryInput = ReturnType<typeof createTerminalLiveAccessoryInput>
 
 const TERMINAL_KEYBOARD_DISMISS_ACTION_SHEET_FALLBACK_MS = 450
+
+type MobileSessionStyles = ReturnType<typeof createMobileSessionFrameStyles> &
+  ReturnType<typeof createMobileSessionReaderStyles> &
+  ReturnType<typeof createMobileSessionReviewCommentStyles> &
+  ReturnType<typeof createMobileSessionCommandInputStyles>
+
+const MobileSessionThemeContext = createContext<{
+  colors: MobileThemeColors
+  styles: MobileSessionStyles
+} | null>(null)
+
+function useMobileSessionTheme(): { colors: MobileThemeColors; styles: MobileSessionStyles } {
+  const ctx = useContext(MobileSessionThemeContext)
+  if (!ctx) {
+    throw new Error('useMobileSessionTheme must be used within MobileSessionThemeContext.Provider')
+  }
+  return ctx
+}
+
+function createMobileSessionStyles(
+  colors: MobileThemeColors,
+  chrome: MobileEinkChrome
+): MobileSessionStyles {
+  return {
+    ...createMobileSessionFrameStyles(colors, chrome),
+    ...createMobileSessionReaderStyles(colors, chrome),
+    ...createMobileSessionReviewCommentStyles(colors, chrome),
+    ...createMobileSessionCommandInputStyles(colors, chrome)
+  }
+}
 
 function getActiveTabIdForHandle(
   tabs: MobileSessionTab[],
@@ -280,6 +316,7 @@ function MarkdownReader({
   onDiscard: () => void
   keyboardLift: number
 }) {
+  const { colors, styles } = useMobileSessionTheme()
   // The editor lives in a WebView; native Keyboard events under-report its
   // covered area, so prefer the inset measured inside the WebView when larger.
   const [webviewKeyboardInset, setWebviewKeyboardInset] = useState(0)
@@ -416,6 +453,7 @@ function DiffLineRow({
   onSubmitComment: (lineNumber: number) => void
   onDeleteComment: (commentId: string) => void
 }) {
+  const { colors, styles } = useMobileSessionTheme()
   const commentLine = line.newLineNumber
   const isCommenting = commentLine !== undefined && activeCommentLine === commentLine
   const canComment = commentLine !== undefined
@@ -543,6 +581,7 @@ function FileReader({
   language?: string
   diffCommentActions?: DiffCommentActions
 }) {
+  const { colors, styles } = useMobileSessionTheme()
   const syntaxLanguage = useMemo(
     () => resolveMobileSyntaxLanguage(relativePath || title, language),
     [language, relativePath, title]
@@ -830,6 +869,9 @@ export default function SessionScreen() {
     created?: string
     warning?: string
   }>()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileSessionStyles(colors, chrome), [colors, chrome])
+  const sessionThemeContextValue = useMemo(() => ({ colors, styles }), [colors, styles])
   const isFolderWorkspaceRoute = worktreeId.startsWith('folder:')
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -4546,7 +4588,8 @@ export default function SessionScreen() {
   const showHeaderMoreButton = showAgentSessionHistoryAction || showChecksAction
 
   return (
-    <View ref={setMobileSessionRootRef} style={styles.container}>
+    <MobileSessionThemeContext.Provider value={sessionThemeContextValue}>
+      <View ref={setMobileSessionRootRef} style={styles.container}>
       <View style={styles.kavInner}>
         <SafeAreaView style={styles.sessionChrome} edges={['top']}>
           <View style={styles.sessionTopBar}>
@@ -5579,5 +5622,6 @@ export default function SessionScreen() {
         onClose={() => setDeleteKeyTarget(null)}
       />
     </View>
+    </MobileSessionThemeContext.Provider>
   )
 }

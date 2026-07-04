@@ -18,7 +18,10 @@ import {
   Strikethrough
 } from 'lucide-react-native'
 import WebView, { type WebViewMessageEvent } from 'react-native-webview'
-import { colors, radii, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { normalizeMobileRichMarkdownKeyboardInset } from './mobile-rich-markdown-editor-keyboard-inset-script'
 import {
   buildMobileRichMarkdownEditorHtml,
@@ -113,11 +116,16 @@ function MobileRichMarkdownEditorInner({
   onChange,
   onKeyboardInsetChange
 }: Props) {
+  const { colors, chrome, isEinkMode } = useMobileTheme()
+  const styles = useMemo(() => createMobileRichMarkdownEditorStyles(colors, chrome), [colors, chrome])
   const webViewRef = useRef<WebView>(null)
   const readyRef = useRef(false)
   const documentGenerationRef = useRef(0)
   const currentWebViewContentRef = useRef<string | null>(null)
-  const html = useMemo(() => buildMobileRichMarkdownEditorHtml(), [])
+  const html = useMemo(
+    () => buildMobileRichMarkdownEditorHtml(colors, isEinkMode),
+    [colors, isEinkMode]
+  )
 
   const inject = useCallback((script: string) => {
     webViewRef.current?.injectJavaScript(`${script}\ntrue;`)
@@ -247,6 +255,7 @@ function MobileRichMarkdownEditorInner({
                 onPress={() => runCommand(item.command)}
                 style={({ pressed }) => [
                   styles.toolbarButton,
+                  chrome.toolbarIconButton,
                   pressed && editable ? styles.toolbarButtonPressed : null,
                   !editable ? styles.toolbarButtonDisabled : null
                 ]}
@@ -280,41 +289,40 @@ function MobileRichMarkdownEditorInner({
 
 export const MobileRichMarkdownEditor = memo(MobileRichMarkdownEditorInner)
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    minHeight: 0,
-    backgroundColor: colors.bgBase
-  },
-  toolbar: {
-    minHeight: 42,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel
-  },
-  toolbarContent: {
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6
-  },
-  toolbarButton: {
-    minWidth: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button,
-    paddingHorizontal: spacing.xs
-  },
-  toolbarButtonPressed: {
-    backgroundColor: colors.bgRaised
-  },
-  toolbarButtonDisabled: {
-    opacity: 0.55
-  },
-  webView: {
-    flex: 1,
-    minHeight: 0,
-    backgroundColor: colors.bgBase
-  }
-})
+function createMobileRichMarkdownEditorStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      minHeight: 0,
+      backgroundColor: colors.bgBase
+    },
+    toolbar: {
+      minHeight: 42,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderSubtle,
+      backgroundColor: colors.bgPanel
+    },
+    toolbarContent: {
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6
+    },
+    toolbarButton: {
+      minWidth: 30,
+      height: 30,
+      paddingHorizontal: spacing.xs
+    },
+    toolbarButtonPressed: {
+      ...chrome.listRowPressed
+    },
+    toolbarButtonDisabled: {
+      opacity: 0.55
+    },
+    webView: {
+      flex: 1,
+      minHeight: 0,
+      backgroundColor: colors.bgBase
+    }
+  })
+}

@@ -1,21 +1,13 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  SectionList,
-  Text,
-  TextInput,
-  View
-} from 'react-native'
-import { Minus, MoreHorizontal, Plus, Sparkles } from 'lucide-react-native'
-import { colors, spacing } from '../theme/mobile-theme'
+import { ActivityIndicator, Pressable, SectionList, Text, TextInput, View } from 'react-native'
+import { GitBranch, Minus, MoreHorizontal, Plus, Sparkles } from 'lucide-react-native'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { MobileSourceControlCreatePrEntry } from './MobileSourceControlCreatePrEntry'
 import { MobileCommitFailurePanel } from './MobileCommitFailurePanel'
 import { KEYBOARD_COMMIT_BAR_CLEARANCE } from './mobile-source-control-screen-state'
 import { makeRenderFileRow, BranchCompareFooter } from './MobileSourceControlFileRows'
 import type { MobileSourceControlState } from './use-mobile-source-control-state'
-import { styles } from './mobile-source-control-styles'
-import { hubStyles } from './mobile-source-control-hub-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 type Props = {
   state: MobileSourceControlState
@@ -24,6 +16,8 @@ type Props = {
 // Changes tab: local file changes only — uncommitted (staged/unstaged) plus
 // committed-on-branch vs base. PR conflicts and push status live elsewhere.
 export function MobileSourceControlContent({ state }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const {
     insets,
     connState,

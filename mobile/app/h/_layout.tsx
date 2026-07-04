@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, StyleSheet, PanResponder } from 'react-native'
 import { Stack, useGlobalSearchParams, usePathname } from 'expo-router'
-import { colors } from '../../src/theme/mobile-theme'
+import { useMobileTheme } from '../../src/theme/mobile-theme-context'
+import type { MobileThemeColors } from '../../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../../src/theme/mobile-eink-chrome'
 import { useResponsiveLayout } from '../../src/layout/responsive-layout'
 import {
   HOST_SIDEBAR_DEFAULT_WIDTH,
@@ -27,6 +29,7 @@ function clampSidebarToWindow(width: number, windowWidth: number): number {
 }
 
 function HostStack({ animation }: { animation: 'none' | 'default' }) {
+  const { colors } = useMobileTheme()
   return (
     <Stack
       screenOptions={{
@@ -57,6 +60,8 @@ function HostStack({ animation }: { animation: 'none' | 'default' }) {
 }
 
 export default function HostGroupLayout() {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createHostLayoutStyles(colors, chrome), [colors, chrome])
   // Wide layout = tablet/foldable canvas (see responsive-layout-metrics).
   const { isWideLayout, width: windowWidth } = useResponsiveLayout()
   const { hostId, action } = useGlobalSearchParams<{ hostId?: string; action?: string }>()
@@ -157,29 +162,29 @@ export default function HostGroupLayout() {
   )
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: colors.bgBase
-  },
-  sidebar: {
-    borderRightWidth: 1,
-    borderRightColor: colors.borderSubtle
-  },
-  // Invisible grab strip over the sidebar's right edge. Absolute + elevated so it
-  // sits above the worktree list and reliably owns the drag on Android.
-  resizeHandle: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    width: RESIZE_EDGE_WIDTH,
-    zIndex: 20,
-    elevation: 20
-  },
-  detail: {
-    flex: 1,
-    minWidth: 0
-  }
-})
+function createHostLayoutStyles(colors: MobileThemeColors, _chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    row: {
+      flex: 1,
+      flexDirection: 'row',
+      backgroundColor: colors.bgBase
+    },
+    sidebar: {
+      borderRightWidth: 1,
+      borderRightColor: colors.borderSubtle
+    },
+    resizeHandle: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: RESIZE_EDGE_WIDTH,
+      zIndex: 20,
+      elevation: 20
+    },
+    detail: {
+      flex: 1,
+      minWidth: 0
+    }
+  })
+}

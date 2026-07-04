@@ -1,11 +1,12 @@
+import { useMemo } from 'react'
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { MobileFilePreviewResult } from './mobile-file-preview-request'
 import { MobileFileMarkdownPreview } from './MobileFileMarkdownPreview'
 import { MobileFilePreviewEditableSource } from './MobileFilePreviewEditableSource'
 import { MobileFilePreviewSourceText } from './MobileFilePreviewSourceText'
 import type { MobileFilePreviewLineColumn } from './mobile-file-preview-line-column'
-import { filePreviewStyles as styles } from './mobile-file-preview-styles'
+import { createMobileFilePreviewStyles } from './mobile-file-preview-styles'
 
 type Props = {
   preview: MobileFilePreviewResult
@@ -23,6 +24,9 @@ type Props = {
 }
 
 export function MobileFilePreviewBody({ preview, ...options }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFilePreviewStyles(colors, chrome), [colors, chrome])
+
   if (preview.status === 'loading') {
     return (
       <View style={styles.state}>

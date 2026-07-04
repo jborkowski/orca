@@ -1,14 +1,16 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { GitPullRequestArrow } from 'lucide-react-native'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { MobileCreatePrAction } from './mobile-create-pr-action'
-import { styles } from './mobile-source-control-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 type Props = {
   action: MobileCreatePrAction
 }
 
 export function MobileSourceControlCreatePrEntry({ action }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   if (!action.visible) {
     return null
   }

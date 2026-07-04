@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 
 // Why: auth-failed is no longer necessarily terminal (issue #5200) — a
 // transient rejection can latch it even though the desktop still lists this
@@ -16,6 +19,9 @@ export function AuthFailedBanner({
   onRepair: () => void
   onRemove: () => void
 }) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createAuthFailedBannerStyles(colors), [colors])
+
   return (
     <View style={styles.banner}>
       <Text style={styles.text}>
@@ -23,14 +29,14 @@ export function AuthFailedBanner({
       </Text>
       <View style={styles.actions}>
         {canRetry && (
-          <Pressable style={styles.action} onPress={onRetry}>
+          <Pressable style={chrome.reconnectButton} onPress={onRetry}>
             <Text style={styles.actionText}>Retry</Text>
           </Pressable>
         )}
-        <Pressable style={styles.action} onPress={onRepair}>
+        <Pressable style={chrome.reconnectButton} onPress={onRepair}>
           <Text style={styles.actionText}>Re-pair</Text>
         </Pressable>
-        <Pressable style={styles.action} onPress={onRemove}>
+        <Pressable style={chrome.reconnectButton} onPress={onRemove}>
           <Text style={[styles.actionText, { color: colors.statusRed }]}>Remove</Text>
         </Pressable>
       </View>
@@ -38,29 +44,28 @@ export function AuthFailedBanner({
   )
 }
 
-const styles = StyleSheet.create({
-  banner: {
-    backgroundColor: colors.bgPanel,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle
-  },
-  text: {
-    color: colors.statusRed,
-    fontSize: 13,
-    marginBottom: spacing.sm
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.lg
-  },
-  action: {
-    paddingVertical: spacing.xs
-  },
-  actionText: {
-    color: colors.accentBlue,
-    fontSize: 13,
-    fontWeight: '600'
-  }
-})
+function createAuthFailedBannerStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    banner: {
+      backgroundColor: colors.bgPanel,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderSubtle
+    },
+    text: {
+      color: colors.statusRed,
+      fontSize: 13,
+      marginBottom: spacing.sm
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm
+    },
+    actionText: {
+      color: colors.accentBlue,
+      fontSize: 13,
+      fontWeight: '600'
+    }
+  })
+}

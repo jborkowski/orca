@@ -25,7 +25,10 @@ import type {
   BrowserScreencastFrame,
   BrowserScreencastFrameMetadata
 } from '../transport/browser-screencast-protocol'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, radii, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import {
   MOBILE_BROWSER_FRAME_MIN_INTERVAL_MS,
   buildMobileBrowserScreencastRequest,
@@ -139,6 +142,10 @@ export function MobileBrowserPane({
   bottomInset,
   onToast
 }: MobileBrowserPaneProps) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileBrowserPaneStyles(colors, chrome), [colors, chrome])
+  const buttonColor = (enabled: boolean): string =>
+    enabled ? colors.textSecondary : colors.textMuted
   const [browserViewMode, setBrowserViewMode] = useState<MobileBrowserViewMode>(() =>
     getInitialMobileBrowserViewMode(worktreeId, tab.browserPageId)
   )
@@ -1299,10 +1306,6 @@ export function MobileBrowserPane({
   )
 }
 
-function buttonColor(enabled: boolean): string {
-  return enabled ? colors.textSecondary : colors.textMuted
-}
-
 function createBrowserFrameDataUri(frame: BrowserScreencastFrame): string {
   return `data:image/${frame.format};base64,${Buffer.from(frame.image).toString('base64')}`
 }
@@ -1477,7 +1480,8 @@ function updatePinchZoom(
   )
 }
 
-const styles = StyleSheet.create({
+function createMobileBrowserPaneStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
   root: {
     flex: 1,
     minHeight: 0,
@@ -1501,6 +1505,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.input,
     backgroundColor: colors.bgRaised,
     color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.sm,
     paddingVertical: 0,
     fontSize: 12,
@@ -1555,9 +1561,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.textPrimary,
-    backgroundColor: colors.bgPanel,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    ...chrome.sectionCard,
     borderRadius: radii.button,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -1576,11 +1580,8 @@ const styles = StyleSheet.create({
   dialogCard: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel,
-    padding: spacing.lg
+    padding: spacing.lg,
+    ...chrome.sectionCard
   },
   dialogTitle: {
     color: colors.textPrimary,
@@ -1601,14 +1602,12 @@ const styles = StyleSheet.create({
   },
   dialogButton: {
     minHeight: 34,
-    borderRadius: radii.button,
-    backgroundColor: colors.bgRaised,
-    paddingHorizontal: spacing.md,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    ...chrome.outlineButton
   },
   dialogButtonPrimary: {
-    backgroundColor: colors.textPrimary
+    ...chrome.primaryButton
   },
   dialogButtonPressed: {
     opacity: 0.75
@@ -1640,6 +1639,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgRaised,
     color: colors.textPrimary,
     borderRadius: radii.input,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.md,
     fontSize: 14,
     fontFamily: typography.monoFamily,
@@ -1649,9 +1650,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgRaised
+    ...chrome.toolbarIconButton
   },
   disabled: {
     opacity: 0.35
@@ -1659,4 +1658,5 @@ const styles = StyleSheet.create({
   disabledText: {
     color: colors.textMuted
   }
-})
+  })
+}

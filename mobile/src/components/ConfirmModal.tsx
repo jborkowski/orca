@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import { colors, spacing, radii, typography } from '../theme/mobile-theme'
+import { spacing, radii, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { BottomDrawer } from './BottomDrawer'
 
 type Props = {
@@ -23,6 +26,9 @@ export function ConfirmModal({
   onConfirm,
   onCancel
 }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createConfirmModalStyles(colors), [colors])
+
   return (
     <BottomDrawer visible={visible} onClose={onCancel}>
       <View style={styles.content}>
@@ -31,7 +37,11 @@ export function ConfirmModal({
       </View>
       <View style={styles.buttons}>
         <Pressable
-          style={({ pressed }) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.button,
+            chrome.outlineButton,
+            pressed && styles.pressed
+          ]}
           onPress={onCancel}
         >
           <Text style={styles.cancelText}>{cancelLabel}</Text>
@@ -39,7 +49,7 @@ export function ConfirmModal({
         <Pressable
           style={({ pressed }) => [
             styles.button,
-            destructive ? styles.destructiveButton : styles.confirmButton,
+            destructive ? styles.destructiveButton : chrome.primaryButton,
             pressed && styles.pressed
           ]}
           onPress={() => {
@@ -56,56 +66,53 @@ export function ConfirmModal({
   )
 }
 
-const styles = StyleSheet.create({
-  content: {
-    paddingBottom: spacing.lg
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  message: {
-    fontSize: typography.bodySize,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    lineHeight: 20
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: spacing.sm
-  },
-  button: {
-    flex: 1,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.button,
-    alignItems: 'center'
-  },
-  cancelButton: {
-    backgroundColor: colors.bgPanel
-  },
-  confirmButton: {
-    backgroundColor: colors.textPrimary
-  },
-  destructiveButton: {
-    backgroundColor: colors.statusRed
-  },
-  pressed: {
-    opacity: 0.7
-  },
-  cancelText: {
-    fontSize: typography.bodySize,
-    fontWeight: '600',
-    color: colors.textSecondary
-  },
-  confirmText: {
-    fontSize: typography.bodySize,
-    fontWeight: '600',
-    color: colors.bgBase
-  },
-  destructiveText: {
-    fontSize: typography.bodySize,
-    fontWeight: '600',
-    color: '#fff'
-  }
-})
+function createConfirmModalStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    content: {
+      paddingBottom: spacing.lg
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    message: {
+      fontSize: typography.bodySize,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+      lineHeight: 20
+    },
+    buttons: {
+      flexDirection: 'row',
+      gap: spacing.sm
+    },
+    button: {
+      flex: 1,
+      alignItems: 'center'
+    },
+    destructiveButton: {
+      backgroundColor: colors.statusRed,
+      borderRadius: radii.button,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md
+    },
+    pressed: {
+      opacity: 0.7
+    },
+    cancelText: {
+      fontSize: typography.bodySize,
+      fontWeight: '600',
+      color: colors.textSecondary
+    },
+    confirmText: {
+      fontSize: typography.bodySize,
+      fontWeight: '600',
+      color: colors.onSurfaceBright
+    },
+    destructiveText: {
+      fontSize: typography.bodySize,
+      fontWeight: '600',
+      color: '#fff'
+    }
+  })
+}

@@ -42,7 +42,7 @@ describe('terminal live input affordance', () => {
 
   it('makes the live keyboard target visible instead of status-only chrome', () => {
     expect(liveInputStatusSource).toContain("'Tap to show keyboard'")
-    expect(commandInputStylesSource).toContain('backgroundColor: colors.bgRaised')
+    expect(commandInputStylesSource).toContain('...chrome.outlineButton')
     expect(commandInputStylesSource).toContain('borderWidth: 1')
     expect(commandInputStylesSource).toContain('liveInputFocusTargetPressed')
   })

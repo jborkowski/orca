@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Switch, Text, TextInput, View } from 'react-native'
 import {
   ArrowRight,
@@ -8,7 +8,6 @@ import {
   TriangleAlert,
   X
 } from 'lucide-react-native'
-import { colors } from '../../theme/mobile-theme'
 import type { RpcClient } from '../../transport/rpc-client'
 import type { RpcSuccess } from '../../transport/types'
 import { triggerError, triggerSuccess } from '../../platform/haptics'
@@ -24,7 +23,8 @@ import {
   isBaseHeadDistinct
 } from '../../source-control/pr-compose-validation'
 import { MobilePrBasePicker } from '../MobilePrBasePicker'
-import { mobilePrComposeFormStyles as styles } from './mobile-pr-compose-form-styles'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
+import { createMobilePrComposeFormStyles } from './mobile-pr-compose-form-styles'
 
 export type PrComposePrefill = MobilePrPrefill
 
@@ -51,6 +51,8 @@ export function MobilePrComposeForm({
   onCancel,
   onCreated
 }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrComposeFormStyles(colors, chrome), [colors, chrome])
   const copy = hostedReviewCopy(prefill.provider)
   const ReviewIcon = prefill.provider === 'gitlab' ? GitMerge : GitPullRequestArrow
   const [title, setTitle] = useState(prefill.title)

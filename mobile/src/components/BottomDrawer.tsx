@@ -22,7 +22,8 @@ import Animated, {
   interpolate,
   Extrapolation
 } from 'react-native-reanimated'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { resolveBottomDrawerMounted } from './bottom-drawer-mount-state'
 import { useResponsiveLayout } from '../layout/responsive-layout'
 
@@ -107,21 +108,24 @@ function MountedBottomDrawer({
   // center it horizontally. Vertical bottom-anchoring (and all the drag/keyboard
   // transforms below) is unchanged, so phone behavior stays identical.
   const { isWideLayout, modalMaxWidth } = useResponsiveLayout()
+  const { colors, chrome, isEinkMode, motionEnabled } = useMobileTheme()
+  const showDuration = motionEnabled ? SHOW_DURATION : 0
+  const hideDuration = motionEnabled ? BOTTOM_DRAWER_HIDE_DURATION_MS : 0
 
   useEffect(() => {
     if (visible) {
       translateY.value = 0
       scrollOffsetY.value = 0
-      progress.value = withTiming(1, { duration: SHOW_DURATION })
+      progress.value = withTiming(1, { duration: showDuration })
     } else {
       Keyboard.dismiss()
-      progress.value = withTiming(0, { duration: BOTTOM_DRAWER_HIDE_DURATION_MS }, (finished) => {
+      progress.value = withTiming(0, { duration: hideDuration }, (finished) => {
         if (finished) {
           runOnJS(onHidden)()
         }
       })
     }
-  }, [onHidden, visible])
+  }, [hideDuration, onHidden, showDuration, visible])
 
   // Why: KeyboardAvoidingView and useAnimatedKeyboard are both unreliable
   // inside Modal (iOS ignores KAV; Android needs adjustNothing for
@@ -137,10 +141,12 @@ function MountedBottomDrawer({
 
     const onShow = Keyboard.addListener(showEvent, (e) => {
       const height = e.endCoordinates.height - insets.bottom
-      keyboardOffset.value = withTiming(Math.max(height, 0), { duration: e.duration || 250 })
+      const duration = motionEnabled ? e.duration || 250 : 0
+      keyboardOffset.value = withTiming(Math.max(height, 0), { duration })
     })
     const onHide = Keyboard.addListener(hideEvent, (e) => {
-      keyboardOffset.value = withTiming(0, { duration: e.duration || 250 })
+      const duration = motionEnabled ? e.duration || 250 : 0
+      keyboardOffset.value = withTiming(0, { duration })
     })
 
     return () => {
@@ -148,16 +154,16 @@ function MountedBottomDrawer({
       onHide.remove()
       keyboardOffset.value = 0
     }
-  }, [visible, insets.bottom])
+  }, [motionEnabled, visible, insets.bottom])
 
   const dismiss = useCallback(() => {
     Keyboard.dismiss()
-    progress.value = withTiming(0, { duration: BOTTOM_DRAWER_HIDE_DURATION_MS }, (finished) => {
+    progress.value = withTiming(0, { duration: hideDuration }, (finished) => {
       if (finished) {
         runOnJS(onClose)()
       }
     })
-  }, [onClose, progress])
+  }, [hideDuration, onClose, progress])
 
   useEffect(() => {
     if (!visible) {
@@ -190,13 +196,17 @@ function MountedBottomDrawer({
       if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
         const velocity = Math.max(e.velocityY, 800)
         const remaining = screenHeight - e.translationY
-        const duration = Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+        const duration = motionEnabled
+          ? Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+          : 0
         translateY.value = withTiming(screenHeight, { duration })
         progress.value = withTiming(0, { duration }, () => {
           runOnJS(onClose)()
         })
-      } else {
+      } else if (motionEnabled) {
         translateY.value = withSpring(0, SPRING_CONFIG)
+      } else {
+        translateY.value = 0
       }
     })
   const contentPanGesture = Gesture.Pan()
@@ -213,7 +223,7 @@ function MountedBottomDrawer({
         contentDragCanDismiss.value = false
         contentDragStartY.value = 0
         if (translateY.value !== 0) {
-          translateY.value = withSpring(0, SPRING_CONFIG)
+          translateY.value = motionEnabled ? withSpring(0, SPRING_CONFIG) : 0
         }
         return
       }
@@ -239,13 +249,17 @@ function MountedBottomDrawer({
       if (translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
         const velocity = Math.max(e.velocityY, 800)
         const remaining = screenHeight - translationY
-        const duration = Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+        const duration = motionEnabled
+          ? Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+          : 0
         translateY.value = withTiming(screenHeight, { duration })
         progress.value = withTiming(0, { duration }, () => {
           runOnJS(onClose)()
         })
-      } else {
+      } else if (motionEnabled) {
         translateY.value = withSpring(0, SPRING_CONFIG)
+      } else {
+        translateY.value = 0
       }
     })
 
@@ -273,16 +287,102 @@ function MountedBottomDrawer({
   // runs before the parent unmounts us; show/hide is driven by `progress`, so
   // animationType stays "none". onRequestClose handles the Android back button.
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}>
-      <Animated.View
-        pointerEvents={visible ? 'auto' : 'none'}
-        style={[styles.overlay, { zIndex, elevation: zIndex }]}
-        accessibilityViewIsModal
-        aria-modal
-      >
-        <GestureHandlerRootView style={styles.root}>
-          <Animated.View style={[styles.backdrop, backdropStyle]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+    <Animated.View
+      pointerEvents={visible ? 'auto' : 'none'}
+      style={[drawerChromeStyles.overlay, { zIndex, elevation: zIndex }]}
+      accessibilityViewIsModal
+      aria-modal
+    >
+      <GestureHandlerRootView style={drawerChromeStyles.root}>
+        <Animated.View style={[drawerChromeStyles.backdrop, backdropStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
+        </Animated.View>
+
+        <View
+          style={[drawerChromeStyles.anchor, isWideLayout && drawerChromeStyles.anchorWide]}
+          pointerEvents="box-none"
+        >
+          <Animated.View
+            style={[
+              drawerChromeStyles.drawer,
+              chrome.noShadow,
+              isEinkMode && {
+                borderTopWidth: 1,
+                borderLeftWidth: 1,
+                borderRightWidth: 1,
+                borderColor: colors.borderSubtle
+              },
+              {
+                backgroundColor: colors.bgBase,
+                width: '100%',
+                maxWidth: isWideLayout ? modalMaxWidth : undefined,
+                maxHeight: screenHeight - insets.top - spacing.lg,
+                paddingBottom: insets.bottom + spacing.lg
+              },
+              drawerStyle
+            ]}
+          >
+            {!contentScrollable ? (
+              <>
+                <GestureDetector gesture={handlePanGesture}>
+                  <Animated.View
+                    style={drawerChromeStyles.handleHitArea}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss drawer"
+                  >
+                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
+                  </Animated.View>
+                </GestureDetector>
+                <View style={drawerChromeStyles.staticContent}>{children}</View>
+              </>
+            ) : dragContentToDismiss ? (
+              <>
+                <GestureDetector gesture={handlePanGesture}>
+                  <Animated.View
+                    style={drawerChromeStyles.handleHitArea}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss drawer"
+                  >
+                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
+                  </Animated.View>
+                </GestureDetector>
+                <GestureDetector gesture={contentPanGesture}>
+                  <Animated.View collapsable={false}>
+                    <GestureDetector gesture={scrollGesture}>
+                      <Animated.ScrollView
+                        bounces={false}
+                        keyboardShouldPersistTaps="handled"
+                        onScroll={scrollHandler}
+                        scrollEventThrottle={16}
+                        showsVerticalScrollIndicator={false}
+                      >
+                        {children}
+                      </Animated.ScrollView>
+                    </GestureDetector>
+                  </Animated.View>
+                </GestureDetector>
+              </>
+            ) : (
+              <>
+                <GestureDetector gesture={handlePanGesture}>
+                  <Animated.View
+                    style={drawerChromeStyles.handleHitArea}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss drawer"
+                  >
+                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
+                  </Animated.View>
+                </GestureDetector>
+                <ScrollView
+                  bounces={false}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {children}
+                </ScrollView>
+              </>
+            )}
+            <View style={[drawerChromeStyles.bottomExtension, { backgroundColor: colors.bgBase }]} />
           </Animated.View>
 
           <View style={[styles.anchor, isWideLayout && styles.anchorWide]} pointerEvents="box-none">
@@ -367,7 +467,7 @@ function MountedBottomDrawer({
   )
 }
 
-const styles = StyleSheet.create({
+const drawerChromeStyles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1000
@@ -387,7 +487,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   drawer: {
-    backgroundColor: colors.bgBase,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: spacing.md,
@@ -406,7 +505,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.textMuted,
     opacity: 0.4
   },
   handleHitArea: {
@@ -422,7 +520,6 @@ const styles = StyleSheet.create({
     bottom: -500,
     left: 0,
     right: 0,
-    height: 500,
-    backgroundColor: colors.bgBase
+    height: 500
   }
 })

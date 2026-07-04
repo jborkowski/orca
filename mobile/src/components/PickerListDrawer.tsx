@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check } from 'lucide-react-native'
 
-import { colors, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { BottomDrawer, BOTTOM_DRAWER_HIDE_DURATION_MS } from './BottomDrawer'
 
 type Props<T extends { id: string; label: string }> = {
@@ -24,6 +26,8 @@ export function PickerListDrawer<T extends { id: string; label: string }>({
   onClose,
   renderIcon
 }: Props<T>) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createPickerListDrawerStyles(colors), [colors])
   const [closing, setClosing] = useState(false)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const drawerVisible = visible && !closing
@@ -73,16 +77,19 @@ export function PickerListDrawer<T extends { id: string; label: string }>({
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
-        style={styles.group}
+        style={[chrome.sectionCard, styles.group]}
         contentContainerStyle={items.length === 0 ? styles.emptyContent : undefined}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
-        ItemSeparatorComponent={PickerSeparator}
+        ItemSeparatorComponent={() => <PickerSeparator styles={styles} />}
         renderItem={({ item }) => {
           const selected = item.id === selectedId
           return (
             <Pressable
-              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+              style={({ pressed }) => [
+                styles.item,
+                pressed && chrome.listRowPressed
+              ]}
               onPress={() => closeThenSelect(item)}
             >
               {renderIcon?.(item)}
@@ -101,51 +108,51 @@ export function PickerListDrawer<T extends { id: string; label: string }>({
   )
 }
 
-function PickerSeparator() {
+function PickerSeparator({
+  styles
+}: {
+  styles: ReturnType<typeof createPickerListDrawerStyles>
+}) {
   return <View style={styles.separator} />
 }
 
-const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.xs,
-    paddingBottom: spacing.sm
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted
-  },
-  group: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: 12,
-    overflow: 'hidden',
-    maxHeight: 420,
-    flexGrow: 0
-  },
-  emptyContent: {
-    minHeight: spacing.xl
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-    marginHorizontal: spacing.md
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md + 2
-  },
-  itemPressed: {
-    backgroundColor: colors.bgRaised
-  },
-  itemText: {
-    flex: 1,
-    fontSize: typography.bodySize,
-    color: colors.textPrimary
-  },
-  itemTextSelected: {
-    fontWeight: '600'
-  }
-})
+function createPickerListDrawerStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    header: {
+      paddingHorizontal: spacing.xs,
+      paddingBottom: spacing.sm
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted
+    },
+    group: {
+      maxHeight: 420,
+      flexGrow: 0
+    },
+    emptyContent: {
+      minHeight: spacing.xl
+    },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderSubtle,
+      marginHorizontal: spacing.md
+    },
+    item: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md + 2
+    },
+    itemText: {
+      flex: 1,
+      fontSize: typography.bodySize,
+      color: colors.textPrimary
+    },
+    itemTextSelected: {
+      fontWeight: '600'
+    }
+  })
+}

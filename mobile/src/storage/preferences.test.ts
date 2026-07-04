@@ -9,11 +9,13 @@ import {
   clampHostDockWidth,
   clampHostSidebarWidth,
   loadDisabledTerminalLiveInputHandles,
+  loadEinkDisplayMode,
   loadHostSidebarWidth,
   loadTerminalAutocompleteEnabled,
   loadTerminalLinkOpenMode,
   readDisabledTerminalLiveInputHandlesPreference,
   saveDisabledTerminalLiveInputHandles,
+  saveEinkDisplayMode,
   saveHostSidebarWidth,
   saveTerminalAutocompleteEnabled,
   saveTerminalLinkOpenMode
@@ -25,6 +27,46 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     setItem: vi.fn()
   }
 }))
+
+describe('e-ink display mode preference', () => {
+  beforeEach(() => {
+    vi.mocked(AsyncStorage.getItem).mockReset()
+    vi.mocked(AsyncStorage.setItem).mockReset()
+  })
+
+  it('defaults to disabled when unset', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue(null)
+
+    await expect(loadEinkDisplayMode()).resolves.toBe(false)
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('orca:einkDisplayMode')
+  })
+
+  it('loads enabled only from the persisted true value', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue('true')
+
+    await expect(loadEinkDisplayMode()).resolves.toBe(true)
+
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue('false')
+
+    await expect(loadEinkDisplayMode()).resolves.toBe(false)
+  })
+
+  it('falls back to disabled when storage cannot be read', async () => {
+    vi.mocked(AsyncStorage.getItem).mockRejectedValue(new Error('storage unavailable'))
+
+    await expect(loadEinkDisplayMode()).resolves.toBe(false)
+  })
+
+  it('persists the selected value', async () => {
+    await saveEinkDisplayMode(true)
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('orca:einkDisplayMode', 'true')
+
+    await saveEinkDisplayMode(false)
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('orca:einkDisplayMode', 'false')
+  })
+})
 
 describe('terminal autocomplete preference', () => {
   beforeEach(() => {
