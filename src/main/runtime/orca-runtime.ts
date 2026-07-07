@@ -5707,6 +5707,7 @@ export class OrcaRuntimeService {
     source?: 'headless' | 'renderer'
     oscLinks?: TerminalOscLinkRange[]
     alternateScreen?: boolean
+    pendingEscapeTailAnsi?: string
   } | null> {
     return this.serializeTerminalBufferFromAvailableState(ptyId, opts)
   }
@@ -5741,6 +5742,7 @@ export class OrcaRuntimeService {
     source?: 'headless' | 'renderer'
     oscLinks?: TerminalOscLinkRange[]
     alternateScreen?: boolean
+    pendingEscapeTailAnsi?: string
   } | null> {
     const headlessSnapshot = await this.serializeHeadlessTerminalBuffer(ptyId, {
       ...opts,
@@ -6021,6 +6023,7 @@ export class OrcaRuntimeService {
     source?: 'headless' | 'renderer'
     oscLinks?: TerminalOscLinkRange[]
     alternateScreen?: boolean
+    pendingEscapeTailAnsi?: string
   } | null> {
     const headlessSnapshot = await this.serializeHeadlessTerminalBuffer(ptyId, opts)
     if (headlessSnapshot) {
@@ -6138,6 +6141,10 @@ export class OrcaRuntimeService {
     source?: 'headless'
     oscLinks?: TerminalOscLinkRange[]
     alternateScreen?: boolean
+    // Why: dangling mid-escape tail the restorer must write LAST, after any
+    // reset, so the next live chunk completes it instead of rendering it
+    // literally (#7329).
+    pendingEscapeTailAnsi?: string
   } | null> {
     const state = this.headlessTerminals.get(ptyId)
     if (!state) {
@@ -6166,6 +6173,9 @@ export class OrcaRuntimeService {
           seq: state.outputSequence,
           source: 'headless',
           oscLinks: snapshot.oscLinks,
+          ...(snapshot.pendingEscapeTailAnsi
+            ? { pendingEscapeTailAnsi: snapshot.pendingEscapeTailAnsi }
+            : {}),
           // Why: lets the renderer skip the destructive scrollback clear when
           // restoring an alt-screen snapshot — clearing wipes xterm's own
           // history that the TUI relies on for scroll-up after a tab return.
