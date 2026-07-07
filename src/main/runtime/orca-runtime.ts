@@ -7285,13 +7285,30 @@ export class OrcaRuntimeService {
   //      the existing 'resized' event reaches the phone.
   //   2. Held with no mobile subscriber (post-indefinite-hold): no inner
   //      subscriber to notify; resolve restore target and enqueueLayout
-  //      directly. applyLayout is the SOLE writer of terminalFitOverrides;
-  //      the held branch must not duplicate that mutation. See
-  //      docs/mobile-fit-hold.md.
+  //      directly. applyLayout is the SOLE writer of terminalFitOverrides on
+  //      the normal path, so the held branch defers the mutation to it — the
+  //      one exception is the dead-pty orphan cleanup below, which mirrors
+  //      onPtyExit's sanctioned delete. See docs/mobile-fit-hold.md.
+  //
+  // Returns `true` only when the pty ends converged (no fit-override held);
+  // `false` when a restore was attempted but the resize failed (#7588), or
+  // when there was nothing to reclaim. On a failed-restore `false`, driver/mode
+  // are left unchanged so a driving phone keeps its lock and the modal
+  // truthfully stays — the user can retry.
   async reclaimTerminalForDesktop(ptyId: string): Promise<boolean> {
     if (this.isMobileSubscriberActive(ptyId)) {
+      // Why (#7588): capture the prior mode so a failed restore can roll the
+      // routing-only 'desktop' write back — driver/mode transitions must be
+      // gated on convergence, not committed before we know the resize took.
+      const priorMode = this.getMobileDisplayMode(ptyId)
       this.setMobileDisplayMode(ptyId, 'desktop')
-      await this.applyMobileDisplayMode(ptyId)
+      const converged = await this.applyMobileDisplayMode(ptyId)
+      if (!converged) {
+        // Resize failed — override still held. Leave the driver on its mobile
+        // lock and undo the mode write so nothing is left lying at 'desktop'.
+        this.setMobileDisplayMode(ptyId, priorMode)
+        return false
+      }
       this.setDriver(ptyId, { kind: 'desktop' })
       // Why: a desktop-initiated reclaim is "I'm taking over right now",
       // not a sticky preference. The next mobile subscribe (e.g. user
@@ -7315,15 +7332,32 @@ export class OrcaRuntimeService {
       const renderer = this.lastRendererSizes.get(ptyId)
       const cols = renderer?.cols ?? heldOverride.previousCols ?? fallback.cols
       const rows = renderer?.rows ?? heldOverride.previousRows ?? fallback.rows
-      await this.enqueueLayout(ptyId, { kind: 'desktop', cols, rows })
-      this.setDriver(ptyId, { kind: 'desktop' })
-      // Why: a desktop-initiated reclaim is "I'm taking over right now",
-      // not a sticky preference. Reset to auto so the next mobile subscribe
-      // re-enters phone-fit. (Held-PTY branch may not have an entry, but
-      // calling setMobileDisplayMode('auto') is a no-op deletion in that
-      // case — safe and idempotent.)
-      this.setMobileDisplayMode(ptyId, 'auto')
-      return true
+      const result = await this.enqueueLayout(ptyId, { kind: 'desktop', cols, rows })
+      if (result.ok) {
+        this.setDriver(ptyId, { kind: 'desktop' })
+        // Why: a desktop-initiated reclaim is "I'm taking over right now",
+        // not a sticky preference. Reset to auto so the next mobile subscribe
+        // re-enters phone-fit. (Held-PTY branch may not have an entry, but
+        // calling setMobileDisplayMode('auto') is a no-op deletion in that
+        // case — safe and idempotent.)
+        this.setMobileDisplayMode(ptyId, 'auto')
+        return true
+      }
+      // Why (#7588): the layout entry is gone (pty exited) but the override is
+      // still held — unreachable via public APIs today (onPtyExit deletes both
+      // in lockstep), but reporting success while stranding the override would
+      // re-show the modal on the next hydrate. Run the same cleanup onPtyExit
+      // does (delete override + paired desktop-fit 0×0) so the renderer
+      // converges; nothing to resize on a dead pty.
+      if (result.reason === 'pty-exited' && this.terminalFitOverrides.has(ptyId)) {
+        this.terminalFitOverrides.delete(ptyId)
+        this.notifier?.terminalFitOverrideChanged(ptyId, 'desktop-fit', 0, 0)
+        this.notifyFitOverrideListeners(ptyId, 'desktop-fit', 0, 0)
+        return true
+      }
+      // resize-failed: the override remains held; report the truth so the
+      // modal correctly stays and the user can retry. Driver/mode untouched.
+      return false
     }
     return false
   }
@@ -7439,7 +7473,8 @@ export class OrcaRuntimeService {
   //
   // applyLayout is the SOLE writer of:
   //   - this.layouts
-  //   - this.terminalFitOverrides
+  //   - this.terminalFitOverrides (except the sanctioned dead-pty cleanups in
+  //     onPtyExit and reclaimTerminalForDesktop's orphan branch, which delete)
   //   - this.ptyController.resize (i.e. the actual PTY dims)
   //
   // Every trigger that wants to change PTY dims or flip mode goes through
@@ -7634,11 +7669,17 @@ export class OrcaRuntimeService {
       this.resizeHeadlessTerminal(ptyId, target.cols, target.rows)
     }
 
-    // Why: emit fit-override-changed only when the *mode* flips. Layouts
-    // can change dims without flipping mode (keyboard show/hide while
-    // phone), and waking the renderer on every viewport tick is wasteful
-    // churn.
-    if (modeChanged) {
+    // Why: emit fit-override-changed when the *mode* flips. Layouts can
+    // change dims without flipping mode (keyboard show/hide while phone),
+    // and waking the renderer on every viewport tick is wasteful churn.
+    // Defense-in-depth (#7588): also emit when the override's presence
+    // changed even without a kind flip. applyLayout is the sole writer and
+    // keeps override presence in lockstep with layout kind, so overrideChanged
+    // ≡ modeChanged in every reachable state today; the extra clause fires
+    // only if that invariant is ever violated, repairing the renderer instead
+    // of stranding the held modal.
+    const overrideChanged = (prevFitOverride != null) !== (target.kind === 'phone')
+    if (modeChanged || overrideChanged) {
       // Why: phone→desktop arms the renderer-cascade suppress window
       // before the collateral safeFit IPCs arrive. See "Renderer cascade
       // suppression".
@@ -8036,7 +8077,13 @@ export class OrcaRuntimeService {
   // Multi-mobile: the most recent mobile actor's viewport drives the active
   // phone-fit dims. The earliest-by-subscribe-time subscriber's
   // previousCols/Rows drive the desktop-restore target.
-  async applyMobileDisplayMode(ptyId: string): Promise<void> {
+  //
+  // Returns the post-condition "no fit-override remains held" (#7588): `true`
+  // when it cleared a held override OR nothing was held to begin with, `false`
+  // only when a restore was attempted and the resize failed (override rolled
+  // back, still held). reclaimTerminalForDesktop gates its driver/mode
+  // transitions on this; other callers ignore it.
+  async applyMobileDisplayMode(ptyId: string): Promise<boolean> {
     const mode = this.getMobileDisplayMode(ptyId)
     const inner = this.mobileSubscribers.get(ptyId)
     const subscriber = inner ? this.pickMostRecentActor(inner) : null
@@ -8045,25 +8092,39 @@ export class OrcaRuntimeService {
     if (mode === 'desktop') {
       // Reset wasResizedToPhone on every fitted subscriber so a future
       // toggle back to auto re-issues the resize. applyLayout owns the
-      // actual PTY resize + override delete + renderer notify.
-      let anyWasResized = false
-      if (inner) {
-        for (const sub of inner.values()) {
-          if (sub.wasResizedToPhone) {
-            anyWasResized = true
-            sub.wasResizedToPhone = false
-          }
-        }
+      // actual PTY resize + override delete + renderer notify. Track which
+      // subscribers we cleared so a failed resize can re-arm them.
+      const clearedFitSubscribers = inner
+        ? [...inner.values()].filter((sub) => sub.wasResizedToPhone)
+        : []
+      for (const sub of clearedFitSubscribers) {
+        sub.wasResizedToPhone = false
       }
-      if (anyWasResized) {
+      const anyWasResized = clearedFitSubscribers.length > 0
+      // Why (#7588): also restore when a fit-override is still held but no
+      // subscriber carries wasResizedToPhone — e.g. a null-viewport resubscribe
+      // after an indefinite hold resets the flag yet leaves the override,
+      // stranding the desktop "phone size" modal. Reuse resolveDesktopRestoreTarget
+      // (the same resolver the anyWasResized branch uses) so the two adjacent
+      // restore paths can never resolve to different dims for the same state.
+      if (anyWasResized || this.terminalFitOverrides.has(ptyId)) {
         const restore = this.resolveDesktopRestoreTarget(ptyId)
-        await this.enqueueLayout(ptyId, {
+        const result = await this.enqueueLayout(ptyId, {
           kind: 'desktop',
           cols: restore.cols,
           rows: restore.rows
         })
+        // Why (#7588): a failed resize rolls the override back (still held), so
+        // re-arm the flags we cleared. Otherwise a later unsubscribe under a
+        // finite mobileAutoRestoreFitMs would see wasResizedToPhone=false, skip
+        // scheduling its auto-restore timer, and strand the held phone-fit.
+        if (!result.ok) {
+          for (const sub of clearedFitSubscribers) {
+            sub.wasResizedToPhone = true
+          }
+        }
       } else {
-        // No subscriber was fitted — emit a mode-change resize event so
+        // Nothing was fitted or held — emit a mode-change resize event so
         // the mobile client still learns the toggle landed.
         const size = this.getTerminalSize(ptyId)
         this.notifyTerminalResize(ptyId, {
@@ -8082,7 +8143,10 @@ export class OrcaRuntimeService {
         const viewport = subscriberRecord.viewport
         if (viewport) {
           await this.handleMobileSubscribe(ptyId, subscriberRecord.clientId, viewport)
-          return
+          // After a phone-fit an override IS held, so this reports false. The
+          // auto branch is never reached from reclaim (it sets 'desktop'
+          // first); computed here only to keep the post-condition uniform.
+          return !this.terminalFitOverrides.has(ptyId)
         }
       }
       // Why: always emit the mode change even when no resize occurred — the
@@ -8098,6 +8162,7 @@ export class OrcaRuntimeService {
         seq: this.layouts.get(ptyId)?.seq
       })
     }
+    return !this.terminalFitOverrides.has(ptyId)
   }
 
   // Why: called after a desktop renderer path has successfully resized the
