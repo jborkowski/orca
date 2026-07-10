@@ -5,8 +5,12 @@ const sessionRouteSource = readFileSync(
   new URL('../../app/h/[hostId]/session/[worktreeId].tsx', import.meta.url),
   'utf8'
 )
-const liveInputStatusSource = readFileSync(
-  new URL('../session/MobileTerminalLiveInputStatus.tsx', import.meta.url),
+const inputBarSource = readFileSync(
+  new URL('../session/MobileTerminalInputBar.tsx', import.meta.url),
+  'utf8'
+)
+const modeSwitchSource = readFileSync(
+  new URL('../session/MobileTerminalInputModeSwitch.tsx', import.meta.url),
   'utf8'
 )
 const commandInputStylesSource = readFileSync(
@@ -14,36 +18,44 @@ const commandInputStylesSource = readFileSync(
   'utf8'
 )
 
-function liveInputBarBlock(): string {
-  const start = sessionRouteSource.indexOf('{liveInputEnabled ? (')
-  expect(start).toBeGreaterThanOrEqual(0)
-  const end = sessionRouteSource.indexOf(') : (', start)
-  expect(end).toBeGreaterThan(start)
-  return sessionRouteSource.slice(start, end)
-}
-
-describe('terminal live input affordance', () => {
-  it('keeps the live status row wired as the keyboard focus control', () => {
-    const block = liveInputBarBlock()
-
-    expect(block).toContain('onPress={focusLiveInput}')
-    expect(block).toContain('accessibilityRole="button"')
-    expect(block).toContain('accessibilityLabel="Show keyboard for live terminal input"')
-    expect(block).toContain(
-      'accessibilityHint="Typed text is sent directly to the active terminal"'
-    )
-    expect(block).toContain('pressed && styles.liveInputFocusTargetPressed')
-    expect(block).toContain('!canSend && styles.liveInputFocusTargetDisabled')
-    expect(block).toContain('showSoftInputOnFocus')
-    expect(sessionRouteSource).toContain('focusTerminalLiveInputTarget(liveInputRef.current')
-    expect(sessionRouteSource).toContain('keyboardHeight')
-    expect(sessionRouteSource).toContain('scheduleTerminalLiveInputFocus(liveInputFocusTimerRef')
+describe('terminal unified input affordance', () => {
+  it('uses one visible MobileTerminalInputBar instead of split live/command branches', () => {
+    expect(sessionRouteSource).toContain('<MobileTerminalInputBar')
+    expect(sessionRouteSource).not.toContain('{liveInputEnabled ? (')
+    expect(sessionRouteSource).not.toContain('MobileTerminalLiveInputStatus')
+    expect(sessionRouteSource).not.toContain('styles.liveInputCapture')
+    expect(sessionRouteSource).not.toContain('ChevronsRight')
   })
 
-  it('makes the live keyboard target visible instead of status-only chrome', () => {
-    expect(liveInputStatusSource).toContain("'Tap to show keyboard'")
-    expect(commandInputStylesSource).toContain('...chrome.outlineButton')
-    expect(commandInputStylesSource).toContain('borderWidth: 1')
-    expect(commandInputStylesSource).toContain('liveInputFocusTargetPressed')
+  it('keeps the unified field wired for direct focus and live mirror handlers', () => {
+    expect(inputBarSource).toContain('ref={liveInputRef}')
+    expect(inputBarSource).toContain('showSoftInputOnFocus')
+    expect(inputBarSource).toContain('onLiveInputChange')
+    expect(inputBarSource).toContain('onLiveInputKeyPress')
+    expect(inputBarSource).toContain('onLiveInputSubmit')
+    expect(sessionRouteSource).toContain('focusTerminalLiveInputTarget(liveInputRef.current')
+    expect(sessionRouteSource).toContain('keyboardHeight')
+  })
+
+  it('does not hide the capture field offscreen', () => {
+    expect(inputBarSource).not.toContain('opacity: 0')
+    expect(inputBarSource).not.toContain('width: 1')
+    expect(inputBarSource).toContain('styles.terminalInput')
+  })
+
+  it('labels the direct and command mode switch explicitly', () => {
+    expect(sessionRouteSource).toContain('<MobileTerminalInputModeSwitch')
+    expect(modeSwitchSource).toContain('Direct')
+    expect(modeSwitchSource).toContain('Command')
+    expect(modeSwitchSource).toContain(
+      'Direct input — keystrokes go to terminal immediately'
+    )
+    expect(modeSwitchSource).toContain('Command input — compose then send')
+  })
+
+  it('uses a shared terminalInput style for the visible field', () => {
+    expect(commandInputStylesSource).toContain('terminalInput:')
+    expect(commandInputStylesSource).not.toContain('liveInputCapture')
+    expect(commandInputStylesSource).not.toContain('liveInputFocusTarget')
   })
 })

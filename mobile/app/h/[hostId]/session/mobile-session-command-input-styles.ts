@@ -122,7 +122,7 @@ export function createMobileSessionCommandInputStyles(
       borderTopColor: colors.borderSubtle,
       backgroundColor: colors.bgPanel
     },
-    textInput: {
+    terminalInput: {
       ...chrome.outlineButton,
       flex: 1,
       height: 34,
@@ -133,37 +133,6 @@ export function createMobileSessionCommandInputStyles(
       fontSize: 14,
       fontFamily: typography.monoFamily,
       marginRight: spacing.sm
-    },
-    liveInputBar: {
-      gap: spacing.sm
-    },
-
-    liveInputFocusTarget: {
-      ...chrome.outlineButton,
-      flex: 1,
-      minHeight: 34,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      borderRadius: radii.input,
-      paddingHorizontal: spacing.sm + 2,
-      paddingVertical: 0
-    },
-
-    liveInputFocusTargetPressed: {
-      ...chrome.listRowPressed
-    },
-
-    liveInputFocusTargetDisabled: {
-      opacity: 0.45
-    },
-
-    liveInputCapture: {
-      position: 'absolute',
-      opacity: 0,
-      width: 1,
-      height: 1,
-      color: colors.textPrimary
     },
     sendButton: {
       ...chrome.primaryButton,

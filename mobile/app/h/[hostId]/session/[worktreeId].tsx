@@ -13,7 +13,6 @@ import {
   Keyboard,
   Platform,
   ActivityIndicator,
-  type KeyboardEvent,
   type LayoutChangeEvent,
   type ListRenderItem
 } from 'react-native'
@@ -22,12 +21,10 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   AlertTriangle,
-  ArrowUp,
   Bot,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsRight,
   Copy,
   Eraser,
   Folder,
@@ -35,7 +32,7 @@ import {
   FileText,
   GitBranch,
   Globe,
-  Keyboard as KeyboardIcon,
+  ListChecks,
   MessageSquare,
   Monitor,
   MoreHorizontal,
@@ -115,10 +112,9 @@ import { isTerminalSendRpcAccepted } from '../../../../src/terminal/terminal-sen
 import { sendMobileTerminalQueryReply } from '../../../../src/terminal/mobile-terminal-query-reply'
 import { TERMINAL_QUERY_REPLY_INPUT_RUNTIME_CAPABILITY } from '../../../../../src/shared/protocol-version'
 import { useTerminalLiveInputCommit } from '../../../../src/terminal/use-terminal-live-input-commit'
-import {
-  getTerminalCommandKeyboardType,
-  getTerminalLiveInputKeyboardType
-} from '../../../../src/terminal/terminal-keyboard-type'
+import { useMobileKeyboardMetrics } from '../../../../src/hooks/use-mobile-keyboard-lift'
+import { MobileTerminalInputBar } from '../../../../src/session/MobileTerminalInputBar'
+import { MobileTerminalInputModeSwitch } from '../../../../src/session/MobileTerminalInputModeSwitch'
 import { normalizeTerminalTextInput } from '../../../../src/terminal/terminal-text-input-normalization'
 import {
   appendBufferedDictation,
@@ -177,8 +173,6 @@ import {
 import { useMobileImageAttachment } from '../../../../src/session/use-mobile-image-attachment'
 import { useMobileTerminalPaste } from '../../../../src/session/use-mobile-terminal-paste'
 import { useTerminalLiveInputModePreference } from '../../../../src/session/use-terminal-live-input-mode-preference'
-import { MobileTerminalLiveInputStatus } from '../../../../src/session/MobileTerminalLiveInputStatus'
-import { MobileTerminalInputActions } from '../../../../src/session/MobileTerminalInputActions'
 import { classifyMobileArtifact } from '../../../../src/session/mobile-artifact-kind'
 import { openMobileTerminalFileTap } from '../../../../src/session/mobile-terminal-file-tap-open'
 import { useLiveWorktreeName } from '../../../../src/session/use-live-worktree-name'
@@ -529,7 +523,7 @@ function DiffLineRow({
       {isCommenting ? (
         <View style={styles.diffCommentComposer}>
           <TextInput
-            style={[styles.textInput, styles.diffCommentInput]}
+            style={[styles.terminalInput, styles.diffCommentInput]}
             value={commentDraft}
             onChangeText={onDraftChange}
             placeholder="Add review note"
@@ -1023,7 +1017,7 @@ export default function SessionScreen() {
   // height ourselves and translate the input/accessory area above the IME without
   // changing the terminal frame height, so keyboard open/close does not resize
   // the desktop PTY.
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const { keyboardHeight, keyboardLift } = useMobileKeyboardMetrics()
   // Why: server-authoritative display mode per terminal. The runtime is the
   // single source of truth — this state is populated from subscribe responses.
   const [terminalModes, setTerminalModes] = useState<Map<string, MobileDisplayMode>>(new Map())
@@ -2647,23 +2641,6 @@ export default function SessionScreen() {
     unsubscribeTerminal,
     subscribeToTerminal
   })
-
-  useEffect(() => {
-    const onShow = (e: KeyboardEvent) => {
-      setKeyboardHeight(e.endCoordinates?.height ?? 0)
-    }
-    const onHide = () => {
-      setKeyboardHeight(0)
-    }
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const showSub = Keyboard.addListener(showEvent, onShow)
-    const hideSub = Keyboard.addListener(hideEvent, onHide)
-    return () => {
-      showSub.remove()
-      hideSub.remove()
-    }
-  }, [])
 
   const scrollActiveTabIntoView = useCallback((tabId: string | null, animated: boolean) => {
     if (!tabId) {
@@ -4422,15 +4399,6 @@ export default function SessionScreen() {
         ? `${verdictDisplayLabel(connectionVerdict)} — tap to retry`
         : MOBILE_SESSION_STATUS_LABELS[connState]
 
-  // Why: keep safe-area padding in layout at all times, then visually translate
-  // the controls over the terminal when the keyboard appears. iOS keyboard
-  // height includes the home-indicator inset; Android IME height does not.
-  const keyboardLift =
-    keyboardHeight > 0
-      ? Platform.OS === 'ios'
-        ? Math.max(0, keyboardHeight - insets.bottom)
-        : keyboardHeight
-      : 0
   const activeTerminalKeyboardLift = (() => {
     if (keyboardLift <= 0 || !activeHandle) {
       return 0
@@ -4995,32 +4963,20 @@ export default function SessionScreen() {
                         />
                       )}
                     </Pressable>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.accessoryKey,
-                        liveInputEnabled && styles.accessoryKeyActive,
-                        pressed && styles.accessoryKeyPressed,
-                        !canSend && styles.accessoryKeyDisabled
-                      ]}
+                    <MobileTerminalInputModeSwitch
+                      liveInputEnabled={liveInputEnabled}
                       disabled={!canSend}
-                      onPress={toggleLiveInput}
-                      accessibilityLabel={
-                        liveInputEnabled
-                          ? 'Switch to buffered command input'
-                          : 'Switch to live terminal input'
-                      }
-                    >
-                      <ChevronsRight
-                        size={14}
-                        color={
-                          liveInputEnabled
-                            ? colors.bgBase
-                            : canSend
-                              ? colors.textSecondary
-                              : colors.textMuted
+                      onSelectDirect={() => {
+                        if (!liveInputEnabled && activeHandle) {
+                          toggleLiveInput()
                         }
-                      />
-                    </Pressable>
+                      }}
+                      onSelectCommand={() => {
+                        if (liveInputEnabled && activeHandle) {
+                          toggleLiveInput()
+                        }
+                      }}
+                    />
                     {canPaste && (
                       <Pressable
                         style={({ pressed }) => [
@@ -5123,126 +5079,32 @@ export default function SessionScreen() {
                   </ScrollView>
                 </View>
 
-                {/* Input bar */}
-                {liveInputEnabled ? (
-                  <View style={[styles.inputBar, styles.liveInputBar]}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.liveInputFocusTarget,
-                        pressed && styles.liveInputFocusTargetPressed,
-                        !canSend && styles.liveInputFocusTargetDisabled
-                      ]}
-                      disabled={!canSend}
-                      onPress={focusLiveInput}
-                      accessibilityRole="button"
-                      accessibilityLabel="Show keyboard for live terminal input"
-                      accessibilityHint="Typed text is sent directly to the active terminal"
-                    >
-                      <KeyboardIcon size={16} color={colors.textSecondary} strokeWidth={2} />
-                      <MobileTerminalLiveInputStatus
-                        dictation={dictation}
-                        isAttaching={isAttaching}
-                      />
-                    </Pressable>
-                    <MobileTerminalInputActions
-                      canSend={canSend}
-                      isAttaching={isAttaching}
-                      dictation={dictation}
-                      dictationMode={dictationMode}
-                      buttonStyle={styles.dictationButton}
-                      activeButtonStyle={styles.dictationButtonActive}
-                      disabledButtonStyle={styles.sendButtonDisabled}
-                      onAttachImage={() => void attachImage('library')}
-                      onAttachFile={() => void attachImage('files')}
-                      onDictationToggle={handleDictationToggle}
-                      onDictationPressIn={handleDictationPressIn}
-                      onDictationPressOut={handleDictationPressOut}
-                      onDictationCancel={cancelDictation}
-                    />
-                    <TextInput
-                      ref={liveInputRef}
-                      style={styles.liveInputCapture}
-                      value={liveInputCapture}
-                      onChangeText={handleLiveInputChange}
-                      onKeyPress={handleLiveInputKeyPress}
-                      onSubmitEditing={handleLiveInputSubmit}
-                      placeholder=""
-                      showSoftInputOnFocus
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      spellCheck={false}
-                      smartInsertDelete={false}
-                      // Why: iOS textContentType wins over autoComplete and can
-                      // narrow the keyboard surface; keep IME switching available.
-                      autoComplete="off"
-                      keyboardType={getTerminalLiveInputKeyboardType(Platform.OS)}
-                      returnKeyType="default"
-                      blurOnSubmit={false}
-                      editable={canSend}
-                      importantForAutofill="no"
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.inputBar}>
-                    <TextInput
-                      ref={commandInputRef}
-                      // Why: Android caches the IME inputType at mount, so toggling
-                      // autocomplete must remount there; iOS can update without a focus-costly remount.
-                      key={
-                        Platform.OS === 'android'
-                          ? autocompleteEnabled
-                            ? 'cmd-input-ac-on'
-                            : 'cmd-input-ac-off'
-                          : 'cmd-input'
-                      }
-                      style={styles.textInput}
-                      value={input}
-                      // Why: iOS kills an active dictation/IME session when JS
-                      // writes a value that differs from the native field text;
-                      // store the raw field text and normalize at send time.
-                      onChangeText={setInput}
-                      placeholder="Type a command…"
-                      placeholderTextColor={colors.textMuted}
-                      autoCapitalize="none"
-                      autoCorrect={autocompleteEnabled}
-                      spellCheck={autocompleteEnabled}
-                      smartInsertDelete={false}
-                      // Why: terminal commands are not autofill content, but the
-                      // keyboard must stay default so non-Latin IMEs remain selectable.
-                      autoComplete="off"
-                      keyboardType={getTerminalCommandKeyboardType(
-                        Platform.OS,
-                        autocompleteEnabled
-                      )}
-                      returnKeyType="send"
-                      editable={canSend}
-                      onSubmitEditing={() => void handleSend()}
-                    />
-                    <MobileTerminalInputActions
-                      canSend={canSend}
-                      isAttaching={isAttaching}
-                      dictation={dictation}
-                      dictationMode={dictationMode}
-                      buttonStyle={styles.dictationButton}
-                      activeButtonStyle={styles.dictationButtonActive}
-                      disabledButtonStyle={styles.sendButtonDisabled}
-                      onAttachImage={() => void attachImage('library')}
-                      onAttachFile={() => void attachImage('files')}
-                      onDictationToggle={handleDictationToggle}
-                      onDictationPressIn={handleDictationPressIn}
-                      onDictationPressOut={handleDictationPressOut}
-                      onDictationCancel={cancelDictation}
-                    />
-                    <Pressable
-                      style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
-                      disabled={!canSend}
-                      onPress={() => void handleSend()}
-                      accessibilityLabel="Send command"
-                    >
-                      <ArrowUp size={18} color={colors.textSecondary} strokeWidth={2.5} />
-                    </Pressable>
-                  </View>
-                )}
+                <MobileTerminalInputBar
+                  colors={colors}
+                  styles={styles}
+                  liveInputEnabled={liveInputEnabled}
+                  canSend={canSend}
+                  isAttaching={isAttaching}
+                  autocompleteEnabled={autocompleteEnabled}
+                  liveInputRef={liveInputRef}
+                  liveInputCapture={liveInputCapture}
+                  commandInput={input}
+                  dictation={dictation}
+                  dictationMode={dictationMode}
+                  onLiveInputChange={handleLiveInputChange}
+                  onLiveInputKeyPress={handleLiveInputKeyPress}
+                  onLiveInputSubmit={handleLiveInputSubmit}
+                  onCommandInputChange={(text) =>
+                    setInput((previousText) => normalizeTerminalTextInput(text, previousText))
+                  }
+                  onSendCommand={handleSend}
+                  onAttachImage={() => void attachImage('library')}
+                  onAttachFile={() => void attachImage('files')}
+                  onDictationToggle={handleDictationToggle}
+                  onDictationPressIn={handleDictationPressIn}
+                  onDictationPressOut={handleDictationPressOut}
+                  onDictationCancel={cancelDictation}
+                />
               </View>
             )}
           </View>
