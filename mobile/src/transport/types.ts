@@ -29,6 +29,7 @@ const PAIRING_OFFER_VERSION = 2
 export const PairingOfferSchema = z.object({
   v: z.literal(PAIRING_OFFER_VERSION),
   endpoint: z.string().min(1),
+  endpoints: z.array(z.string().min(1)).optional(),
   deviceToken: z.string().min(1),
   publicKeyB64: z.string().min(1)
 })
@@ -61,6 +62,7 @@ export type HostProfile = {
   id: string
   name: string
   endpoint: string
+  endpoints?: string[]
   deviceToken: string
   publicKeyB64: string
   lastConnected: number
@@ -70,6 +72,7 @@ export const HostProfileSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   endpoint: z.string().min(1),
+  endpoints: z.array(z.string().min(1)).optional(),
   deviceToken: z.string().min(1),
   publicKeyB64: z.string().min(1),
   lastConnected: z.number().finite()
@@ -82,6 +85,7 @@ export const StoredHostProfileSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   endpoint: z.string().min(1),
+  endpoints: z.array(z.string().min(1)).optional(),
   publicKeyB64: z.string().min(1),
   lastConnected: z.number().finite()
 })
