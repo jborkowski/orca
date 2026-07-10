@@ -5,7 +5,7 @@
 import { existsSync, statSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import os from 'node:os'
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor } from 'electron'
 import { electronApp, is } from '@electron-toolkit/utils'
 import * as QRCode from 'qrcode'
 import {
@@ -27,8 +27,8 @@ import { disposeWorktreeBaseDirectoryWatchers } from './ipc/worktree-base-direct
 import { registerCoreHandlers } from './ipc/register-core-handlers'
 import { initObservability, shutdownObservability } from './observability'
 import { registerMobileHandlers } from './ipc/mobile'
-import { initTelemetry, shutdownTelemetry, trackAppOpenedOnce, track } from './telemetry/client'
-import { classifyError } from './telemetry/classify-error'
+import { notifyAllRemoteRuntimeConnectionsMayBeAvailable } from './ipc/runtime-environment-request-connections'
+import { initTelemetry, shutdownTelemetry, trackAppOpenedOnce } from './telemetry/client'
 import { runManagedHookInstallers } from './agent-hooks/install-telemetry'
 import {
   isAgentStatusHooksEnabled,
@@ -1604,6 +1604,10 @@ function shouldSuppressCodexAutoApprovalSyntheticTitleFromHook(args: {
 }
 
 app.whenReady().then(async () => {
+  // Why: remote hosts commonly disappear while the laptop sleeps or Orca is
+  // unfocused; these strong availability signals revive parked subscriptions.
+  powerMonitor.on('resume', notifyAllRemoteRuntimeConnectionsMayBeAvailable)
+  app.on('browser-window-focus', notifyAllRemoteRuntimeConnectionsMayBeAvailable)
   logStartupMilestone('app-ready')
   electronApp.setAppUserModelId(devInstanceIdentity.appUserModelId)
   app.setName(devInstanceIdentity.name)

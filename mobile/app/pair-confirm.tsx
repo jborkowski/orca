@@ -9,7 +9,7 @@ import {
   type PairingConnectionAttempt
 } from '../src/transport/pairing-connection-attempt'
 import { connect } from '../src/transport/rpc-client'
-import { saveHost, getNextHostName } from '../src/transport/host-store'
+import { savePairedHost } from '../src/transport/save-paired-host'
 import type { ConnectionLogEntry, RpcResponse } from '../src/transport/types'
 import { spacing, radii, typography } from '../src/theme/mobile-theme'
 import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
@@ -85,6 +85,7 @@ export default function PairConfirmScreen() {
     logsRef.current = []
     setLogs([])
     let client: ReturnType<typeof connect> | null = null
+    let authenticatedEndpoint = offer.endpoint
     activePairingAttemptRef.current?.dispose()
 
     // Why: split the try/catch around the network call vs the local save
@@ -98,6 +99,10 @@ export default function PairConfirmScreen() {
     activePairingAttemptRef.current = attempt
     try {
       client = connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64, {
+        endpoints: offer.endpoints,
+        onAuthenticatedEndpoint: (endpoint) => {
+          authenticatedEndpoint = endpoint
+        },
         onLog: (entry) => {
           if (!mountedRef.current || activePairingAttemptRef.current !== attempt) {
             return
@@ -149,16 +154,7 @@ export default function PairConfirmScreen() {
     }
 
     try {
-      const hostId = `host-${Date.now()}`
-      const hostName = await getNextHostName()
-      await saveHost({
-        id: hostId,
-        name: hostName,
-        endpoint: offer.endpoint,
-        deviceToken: offer.deviceToken,
-        publicKeyB64: offer.publicKeyB64,
-        lastConnected: Date.now()
-      })
+      const hostId = await savePairedHost(offer, authenticatedEndpoint)
       if (!mountedRef.current) {
         return
       }
@@ -195,7 +191,10 @@ export default function PairConfirmScreen() {
                 <Text style={styles.primaryButtonText}>Pair</Text>
               </Pressable>
               <Pressable
-                style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryButtonPressed]}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.secondaryButtonPressed
+                ]}
                 onPress={cancel}
               >
                 <Text style={styles.secondaryButtonText}>Cancel</Text>

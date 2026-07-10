@@ -60,6 +60,7 @@ export type RemoteRuntimeSharedSubscription = {
 
 export type RemoteRuntimeSharedConnectionDiagnostics = {
   state: SharedControlConnectionState | 'reconnecting'
+  parked: boolean
   pendingRequestCount: number
   subscriptionCount: number
   reconnectAttempt: number

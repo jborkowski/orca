@@ -44,6 +44,32 @@ function getDefaultPairingAddress(): string | null {
   return ifaces.length > 0 ? ifaces[0]!.address : null
 }
 
+function getPairingAddresses(selectedAddress: string): string[] {
+  // Why: preserve the user's selected route as preferred while giving newer
+  // clients every currently reachable LAN or overlay-network fallback.
+  return Array.from(
+    new Set([selectedAddress, ...getNetworkInterfaces().map(({ address }) => address)])
+  )
+}
+
+function createIpcPairingOffer(
+  rpcServer: OrcaRuntimeRpcServer,
+  args: { address?: string; rotate?: boolean } | undefined,
+  scope: 'mobile' | 'runtime'
+) {
+  const address = args?.address ?? getDefaultPairingAddress()
+  if (!address) {
+    return null
+  }
+  return rpcServer.createPairingOffer({
+    address,
+    addresses: getPairingAddresses(address),
+    rotate: args?.rotate,
+    name: `${scope === 'mobile' ? 'Mobile' : 'Runtime'} ${new Date().toLocaleDateString()}`,
+    scope
+  })
+}
+
 function toRuntimeAccessGrant(device: DeviceEntry): RuntimeAccessGrant {
   return {
     deviceId: device.deviceId,
@@ -82,11 +108,6 @@ export function registerMobileHandlers(
       // Why: allow the caller to specify which network interface address to
       // embed in the QR code. This supports overlay networks (Tailscale,
       // ZeroTier) where the default LAN IP isn't reachable from the phone.
-      const ip = args?.address ?? getDefaultPairingAddress()
-      if (!ip) {
-        return { available: false as const }
-      }
-
       // Why: coalesce repeated QR regenerations onto a single never-scanned
       // pending token so the copy-button flow doesn't accumulate orphaned
       // device credentials forever. The token graduates to a real entry when
@@ -94,13 +115,8 @@ export function registerMobileHandlers(
       // `rotate: true` (explicit "Regenerate" intent because the prior token
       // may have been exposed), we discard any pending token and mint a fresh
       // one so the new QR carries a different credential.
-      const offer = rpcServer.createPairingOffer({
-        address: ip,
-        rotate: args?.rotate,
-        name: `Mobile ${new Date().toLocaleDateString()}`,
-        scope: 'mobile'
-      })
-      if (!offer.available) {
+      const offer = createIpcPairingOffer(rpcServer, args, 'mobile')
+      if (!offer?.available) {
         return { available: false as const }
       }
 
@@ -123,20 +139,10 @@ export function registerMobileHandlers(
   ipcMain.handle(
     'mobile:getRuntimePairingUrl',
     async (_event, args?: { address?: string; rotate?: boolean }) => {
-      const ip = args?.address ?? getDefaultPairingAddress()
-      if (!ip) {
-        return { available: false as const }
-      }
-
       // Why: web/desktop runtime clients need full runtime access, not the
       // mobile allowlist used by phone QR pairing.
-      const offer = rpcServer.createPairingOffer({
-        address: ip,
-        rotate: args?.rotate,
-        name: `Runtime ${new Date().toLocaleDateString()}`,
-        scope: 'runtime'
-      })
-      if (!offer.available) {
+      const offer = createIpcPairingOffer(rpcServer, args, 'runtime')
+      if (!offer?.available) {
         return { available: false as const }
       }
 

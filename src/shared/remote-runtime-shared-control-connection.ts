@@ -10,7 +10,8 @@ import {
   isSharedControlReady,
   waitForSharedControlReadyWithTimeout
 } from './remote-runtime-shared-control-ready'
-import { scheduleSharedControlReconnectOrFinish } from './remote-runtime-shared-control-reconnect'
+import { finishTerminalSharedControlSubscriptions } from './remote-runtime-shared-control-reconnect'
+import { SharedControlRecovery } from './remote-runtime-shared-control-recovery'
 import { requestSharedControl } from './remote-runtime-shared-control-requests'
 import { SharedControlReadyStableResetTimer } from './remote-runtime-shared-control-stability'
 import * as sharedControlState from './remote-runtime-shared-control-state'
@@ -37,9 +38,8 @@ export class RemoteRuntimeSharedControlConnection {
   private ws: WebSocket | null = null
   private sharedKey: Uint8Array | null = null
   private socketCleanup: (() => void) | null = null
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  private readonly readyStableReset: SharedControlReadyStableResetTimer
-  private reconnectAttempt = 0
+  private readyStableTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly recovery = new SharedControlRecovery()
   private intentionallyClosed = false
   private lastConnectedAt: number | null = null
   private lastClose: { code: number; reason: string } | null = null
@@ -67,6 +67,7 @@ export class RemoteRuntimeSharedControlConnection {
     params: unknown,
     timeoutMs: number
   ): Promise<RuntimeRpcResponse<TResult>> {
+    this.notifyConnectionMayBeAvailable()
     return requestSharedControl({
       pendingRequests: this.pendingRequests,
       method,
@@ -87,6 +88,7 @@ export class RemoteRuntimeSharedControlConnection {
     timeoutMs: number,
     callbacks: SharedControlSubscriptionCallbacks<TResult>
   ): Promise<RemoteRuntimeSharedSubscription> {
+    this.notifyConnectionMayBeAvailable()
     return startSharedControlSubscription({
       subscriptions: this.subscriptions,
       method,
@@ -100,7 +102,7 @@ export class RemoteRuntimeSharedControlConnection {
 
   close(error?: Error): void {
     this.intentionallyClosed = true
-    this.clearReconnectTimer()
+    this.recovery.close()
     for (const subscription of Array.from(this.subscriptions.values())) {
       this.closeSubscription(subscription.requestId)
     }
@@ -110,14 +112,19 @@ export class RemoteRuntimeSharedControlConnection {
   getDiagnostics(): RemoteRuntimeSharedConnectionDiagnostics {
     return sharedControlState.buildSharedControlDiagnostics({
       state: this.state,
-      reconnecting: this.reconnectTimer !== null,
+      reconnecting: this.recovery.timer !== null,
+      parked: this.recovery.parked,
       pendingRequestCount: this.pendingRequests.size,
       subscriptionCount: this.subscriptions.size,
-      reconnectAttempt: this.reconnectAttempt,
+      reconnectAttempt: this.recovery.reconnectAttempt,
       lastConnectedAt: this.lastConnectedAt,
       lastClose: this.lastClose,
       lastError: this.lastError
     })
+  }
+
+  notifyConnectionMayBeAvailable(): void {
+    this.recovery.revive(this.options.environmentId, this.intentionallyClosed, () => this.open())
   }
 
   private ensureReadyWithTimeout(timeoutMs: number): Promise<void> {
@@ -147,7 +154,7 @@ export class RemoteRuntimeSharedControlConnection {
       )
       return
     }
-    this.clearReconnectTimer()
+    this.recovery.markOpening()
     const opened = openSharedControlSocket(this.pairing, {
       getCurrentSocket: () => this.ws,
       onClose: (close, error) => {
@@ -262,8 +269,16 @@ export class RemoteRuntimeSharedControlConnection {
   private handleSocketClosed(error: RemoteRuntimeClientError): void {
     this.lastError = error.message
     this.closeSocket(error)
+    if (finishTerminalSharedControlSubscriptions(error, this.subscriptions)) {
+      return
+    }
     if (this.subscriptions.size > 0 && !this.intentionallyClosed) {
-      this.scheduleReconnect()
+      this.recovery.schedule({
+        environmentId: this.options.environmentId,
+        intentionallyClosed: this.intentionallyClosed,
+        subscriptionCount: this.subscriptions.size,
+        open: () => this.open()
+      })
     }
   }
 
@@ -288,35 +303,15 @@ export class RemoteRuntimeSharedControlConnection {
     this.state = 'closed'
   }
 
-  private scheduleReconnect(): void {
-    const scheduled = scheduleSharedControlReconnectOrFinish({
-      current: this.reconnectTimer,
-      intentionallyClosed: this.intentionallyClosed,
-      reconnectAttempt: this.reconnectAttempt,
-      delaysMs: [250, 500, 1000, 2000, 4000, 8000, 15_000],
-      subscriptions: this.subscriptions,
-      open: () => {
-        this.reconnectTimer = null
-        this.open()
-      }
-    })
-    this.reconnectTimer = scheduled.timer
-    this.reconnectAttempt = scheduled.reconnectAttempt
-  }
-
-  private clearReconnectTimer(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = null
-    }
-  }
-
   private scheduleReconnectAttemptReset(): void {
     this.readyStableReset.schedule({
       getState: () => this.state,
       getSocket: () => this.ws,
       reset: () => {
-        this.reconnectAttempt = 0
+        this.recovery.reconnectAttempt = 0
+      },
+      clearCurrent: () => {
+        this.readyStableTimer = null
       }
     })
   }

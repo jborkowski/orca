@@ -61,4 +61,13 @@ describe('pairing deep links', () => {
     expect(parsePairingCode(`orca://pair?code=${code}`)).toEqual(offer)
     expect(parsePairingCode(code)).toEqual(offer)
   })
+
+  it('preserves optional endpoint candidates while accepting legacy offers', () => {
+    const candidates = [offer.endpoint, 'ws://192.168.1.24:6768']
+    expect(parsePairingCode(encodeOffer({ ...offer, endpoints: candidates }))).toMatchObject({
+      endpoint: offer.endpoint,
+      endpoints: candidates
+    })
+    expect(parsePairingCode(encodeOffer())).toEqual(offer)
+  })
 })
