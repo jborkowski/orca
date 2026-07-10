@@ -28,7 +28,8 @@
         "minimaxToggleDescription": "アクティブなワークスペースの MiniMax サブスクリプション使用状況を表示します。",
         "sshToggleDescription": "設定済み SSH ホストとリモート Orca ホストがある場合に表示します。",
         "resourceUsageToggleDescription": "リソースマネージャーを表示します。これをクリックすると、CPU、メモリ、セッション、デーモン コントロール、およびワークスペース ディスク スキャンが行われます。",
-        "portsToggleDescription": "ライブワークスペースポートを表示します。ワークスペーススコープのポートと外部リスナーの場合はこれをクリックします。"
+        "portsToggleDescription": "ライブワークスペースポートを表示します。ワークスペーススコープのポートと外部リスナーの場合はこれをクリックします。",
+        "grokToggleDescription": "Grok CLI でサインインしている場合に Grok サブスクリプションのクレジット使用量を表示します。"
       }
     }
   },
@@ -635,7 +636,7 @@
         "94a5afe910": "SSH ホスト",
         "40d80bad8a": "ベータ",
         "de0c2907a1": "リモート Orca サーバー",
-        "b351014180": "Orca の統計と Claude、Codex、OpenCode の使用状況分析。",
+        "b351014180": "Orca の統計に加え、Claude、Codex、OpenCode のトークン分析と Grok サブスクリプション使用状況。",
         "d72a58b5b9": "統計と使用状況",
         "dcd0d9b74f": "よく使う操作のキーボード ショートカット。",
         "94295ebfb3": "ショートカット",
@@ -676,7 +677,7 @@
         "cd50cec5d7": "Orca を通じて複数のコーディング agents を調整します。",
         "58a868e8e4": "オーケストレーション",
         "7c79d3b7bf": "任意",
-        "b1c2f8b0ac": "Claude、Codex、Gemini、OpenCode Go のオプションのアカウント切り替え。",
+        "b1c2f8b0ac": "Claude、Codex、Gemini、OpenCode Go、MiniMax、Grok の任意のアカウント切り替えと使用量設定。",
         "f70ac54d38": "AI プロバイダー アカウント",
         "4121f7a0a2": "AI agents を管理し、デフォルトを設定し、コマンドをカスタマイズします。",
         "b49abbd2f7": "エージェント",
@@ -3032,7 +3033,9 @@
             "c0e972d726": "キャンセル",
             "06741a2f3d": "MiniMax の使用量詳細を開く",
             "3bbf140864": "MiniMax 使用量",
-            "remoteServerLabel": "リモートサーバー"
+            "remoteServerLabel": "リモートサーバー",
+            "grokUsageAria": "Grok の使用状況詳細を開く",
+            "grokUsageMenu": "Grok の使用状況"
           },
           "StatusBarUsageEmptyCta": {
             "828c764a79": "アカウントを接続する",
@@ -3380,7 +3383,8 @@
           "b2cf4310ce": "概要",
           "908c470587": "codex",
           "eb6a066185": "claude",
-          "eee19cfade": "概要"
+          "eee19cfade": "概要",
+          "grokUsageTab": "Grok"
         },
         "UsageOverviewPane": {
           "22ed1b7669": "セッション",
@@ -3431,8 +3435,13 @@
             "0bba8ca244": "統計",
             "0e2a0b6431": "使用法",
             "372debfac0": "統計",
-            "26bb901fcd": "Orca の統計に加え、Claude、Codex、OpenCode の使用状況分析、トークン、キャッシュ、モデル、セッションを組み合わせたもの。",
-            "cb2430ae6a": "統計と使用状況"
+            "26bb901fcd": "Orca の統計に加え、Claude、Codex、OpenCode のトークン分析と Grok サブスクリプション使用状況。",
+            "cb2430ae6a": "統計と使用状況",
+            "f8a1b2c3d4": "grok",
+            "e7f0a1b2c3": "サブスクリプション",
+            "d6e9f0a1b2": "クレジット",
+            "a3b6c7d8e9": "grok の使用状況",
+            "9f2a3b4c5d": "xai"
           }
         },
         "usage": {
@@ -3482,6 +3491,17 @@
           "faf3444859": "入力",
           "a8b7487ff7": "出力",
           "cfe2282ffa": "不明"
+        },
+        "GrokUsagePane": {
+          "g8h9i0j1k2": "Grok の使用状況",
+          "b2d3e4f5c6": "Grok CLI OAuth (~/.grok/auth.json) から取得した週次サブスクリプションクレジット。ステータスバーと同じ情報源です。",
+          "c3e4f5a6b7": "アカウントで設定",
+          "h9i0j1k2l3": " • {{value0}}",
+          "i0j1k2l3m4": "Grok 使用状況を更新",
+          "d4f5a6b7c8": "更新",
+          "e5a6b7c8d9": "使用済み週次クレジット",
+          "f6b7c8d9e0": "請求期間のリセット",
+          "a7b8c9d0e1": "Grok アカウント設定"
         }
       },
       "sparse": {
@@ -6297,7 +6317,7 @@
           "b5ee17826b": "Pair remote Orca runtimes for persistent sessions, richer remote state, and web or mobile handoff.",
           "7686cb5c36": "このブラウザを保存された Orca サーバーに接続します。",
           "bd0181eeca": "リモート Orca サーバー",
-          "8acf3f22e0": "Orca の統計と Claude、Codex、OpenCode の使用状況分析。",
+          "8acf3f22e0": "Orca の統計に加え、Claude、Codex、OpenCode のトークン分析と Grok サブスクリプション使用状況。",
           "954a8f5aef": "統計と使用状況",
           "a737a4bb22": "よく使う操作のキーボード ショートカット。",
           "23bf7a1ad4": "ショートカット",
@@ -6967,7 +6987,13 @@
             "b84a5b0c8a": "プロバイダー アカウントをこのデバイスまたは WSL で検査および追加するかどうかを選択します。",
             "d09fb5ca92": "アカウントの場所",
             "733f9e2a93": "MiniMax 使用量",
-            "f8374c3151": "ローカルのレート制限取得用に platform.minimax.io のセッション Cookie を貼り付けます。"
+            "f8374c3151": "ローカルのレート制限取得用に platform.minimax.io のセッション Cookie を貼り付けます。",
+            "f4a8c2e1b7": "Grok (xAI) の使用状況",
+            "e3b7d1f9a2": "週次クレジット使用量のための Grok CLI (grok login) による OAuth サインイン。",
+            "d2c6a0e8f1": "grok",
+            "c1b5f9d7e0": "xai",
+            "b0a4e8c6d9": "認証",
+            "a9f3d7b5c8": "ログイン"
           }
         },
         "advanced": {
@@ -7181,7 +7207,11 @@
               "detailed": "詳細"
             },
             "9a115966d3": "閉じるときにトレイへ最小化",
-            "4d5b9427b5": "有効にすると、ウィンドウを閉じてもOrcaは終了せず、システムトレイで実行を続けます。"
+            "4d5b9427b5": "有効にすると、ウィンドウを閉じてもOrcaは終了せず、システムトレイで実行を続けます。",
+            "f8e2a1c4b6": "Grok の使用状況",
+            "e7d1b0f3a5": "Grok CLI OAuth から Grok の週次クレジット使用量を表示します。",
+            "d6c0a9e2f4": "grok",
+            "c5b9f8d1e3": "xai"
           }
         },
         "auto": {
@@ -8936,6 +8966,21 @@
               }
             }
           }
+        },
+        "GrokAccountsSection": {
+          "a1b2c3d4e5": "Grok (xAI)",
+          "f6e5d4c3b2": "Grok CLI サインインから週次クレジット使用量を表示します (セッションファイル ~/.grok/auth.json)。",
+          "0d8e77bc40": "Grok CLI ドキュメント",
+          "ad47a33f72": "読み込み中…",
+          "b2c3d4e5f6": "サインイン済み",
+          "c3d4e5f6a7": "サインイン済みです。Orca はディスク上のそのファイルだけを読み取ります。使用状況の取得に失敗する場合は grok login を再実行してください。",
+          "d4e5f6a7b8": "セッションの有効期限が切れました。ターミナルで grok login を実行して更新してください。",
+          "e5f6a7b8c9": "Grok CLI にサインインしていません",
+          "f6a7b8c9d0": "ターミナルで grok login を実行してから、ここで「使用状況を更新」をクリックしてください。",
+          "3325d996cb": "使用状況を更新",
+          "a8f3e2c1b4": "週次クレジット",
+          "b7e2d9f0a3": "ターミナルの grok /usage 画面と同じ週次クレジット率です。",
+          "c6d1a8f4e2": "{{when}} にリセット"
         }
       },
       "right": {

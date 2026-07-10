@@ -71,6 +71,7 @@ function usageSettings(overrides: Partial<UsageProviderSettings> = {}): UsagePro
     opencodeSessionCookie: '',
     geminiCliOAuthEnabled: false,
     minimaxCookieConfigured: false,
+    grokAuthConfigured: false,
     ...overrides
   }
 }
@@ -119,6 +120,7 @@ describe('hasUsageProviderSettings', () => {
       hasUsageProviderSettings(usageSettings({ opencodeSessionCookie: ' session=abc ' }))
     ).toBe(true)
     expect(hasUsageProviderSettings(usageSettings({ minimaxCookieConfigured: true }))).toBe(true)
+    expect(hasUsageProviderSettings(usageSettings({ grokAuthConfigured: true }))).toBe(true)
   })
 
   it('does not treat empty or unloaded settings as configured', () => {
@@ -159,6 +161,14 @@ describe('hasUsageProviderSettingsForProvider', () => {
     ).toBe(true)
     expect(hasUsageProviderSettingsForProvider('minimax', usageSettings())).toBe(false)
     expect(hasUsageProviderSettingsForProvider('minimax', null)).toBe(false)
+  })
+
+  it('treats grokAuthConfigured as the durable signal for Grok', () => {
+    expect(
+      hasUsageProviderSettingsForProvider('grok', usageSettings({ grokAuthConfigured: true }))
+    ).toBe(true)
+    expect(hasUsageProviderSettingsForProvider('grok', usageSettings())).toBe(false)
+    expect(hasUsageProviderSettingsForProvider('grok', null)).toBe(false)
   })
 })
 
@@ -235,6 +245,20 @@ describe('getVisibleUsageProvider', () => {
     })
   })
 
+  it('keeps Grok visible while the snapshot is pending when CLI auth is configured', () => {
+    const visible = getVisibleUsageProvider(
+      'grok',
+      null,
+      usageSettings({ grokAuthConfigured: true })
+    )
+    expect(visible).toMatchObject({
+      provider: 'grok',
+      status: 'fetching',
+      session: null,
+      weekly: null
+    })
+  })
+
   it('keeps MiniMax visible when the fetch returns unavailable for a configured cookie', () => {
     const unavailable = provider('unavailable', {
       provider: 'minimax',
@@ -271,7 +295,8 @@ describe('isUsageEmptyState', () => {
           gemini: null,
           opencodeGo: null,
           kimi: null,
-          minimax: null
+          minimax: null,
+          grok: null
         },
         usageSettings()
       )
@@ -287,7 +312,8 @@ describe('isUsageEmptyState', () => {
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
-          minimax: provider('unavailable', { provider: 'minimax' })
+          minimax: provider('unavailable', { provider: 'minimax' }),
+          grok: provider('unavailable', { provider: 'grok' })
         },
         usageSettings()
       )
@@ -303,7 +329,8 @@ describe('isUsageEmptyState', () => {
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
-          minimax: provider('unavailable', { provider: 'minimax' })
+          minimax: provider('unavailable', { provider: 'minimax' }),
+          grok: provider('unavailable', { provider: 'grok' })
         },
         usageSettings({
           codexManagedAccounts: [
@@ -330,7 +357,8 @@ describe('isUsageEmptyState', () => {
           gemini: null,
           opencodeGo: null,
           kimi: null,
-          minimax: null
+          minimax: null,
+          grok: null
         },
         null
       )
@@ -346,7 +374,8 @@ describe('isUsageEmptyState', () => {
           gemini: provider('unavailable'),
           opencodeGo: provider('unavailable', { provider: 'opencode-go' }),
           kimi: provider('unavailable', { provider: 'kimi' }),
-          minimax: provider('unavailable', { provider: 'minimax' })
+          minimax: provider('unavailable', { provider: 'minimax' }),
+          grok: provider('unavailable', { provider: 'grok' })
         },
         usageSettings()
       )
