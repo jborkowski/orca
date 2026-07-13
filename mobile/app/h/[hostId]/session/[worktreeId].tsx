@@ -1278,14 +1278,12 @@ export default function SessionScreen() {
       ? { handle: activeHandle, liveInputEnabled: liveInputTerminalHandles.has(activeHandle) }
       : null
     dictationRouteContextRef.current = routeContext
-    void dictation.start().catch((err) => {
+    void dictation.start().catch(() => {
       if (dictationRouteContextRef.current === routeContext) {
         dictationRouteContextRef.current = null
       }
-      triggerError()
-      showToast(err instanceof Error ? err.message : String(err))
     })
-  }, [activeHandle, dictation, liveInputTerminalHandles, triggerError, showToast])
+  }, [activeHandle, dictation, liveInputTerminalHandles])
 
   const cancelDictation = useCallback(() => {
     dictationRouteContextRef.current = null

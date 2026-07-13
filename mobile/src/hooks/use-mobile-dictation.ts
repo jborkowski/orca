@@ -120,66 +120,82 @@ export function useMobileDictation(options: UseMobileDictationOptions): UseMobil
     generationRef.current = generation
     setError(null)
     setStatus('starting')
-    const permission = await requestMicrophonePermissionsAsync()
-    if (generationRef.current !== generation || !enabledRef.current) {
-      if (generationRef.current === generation) {
-        setStatus('idle')
-      }
-      return
-    }
-    if (!permission.granted) {
-      setStatus('idle')
-      throw new Error('Microphone permission denied')
-    }
-
-    const initialized = await initialize()
-    if (generationRef.current !== generation || !enabledRef.current) {
-      void tearDown()
-      if (generationRef.current === generation) {
-        setStatus('idle')
-      }
-      return
-    }
-    if (!initialized) {
-      setStatus('idle')
-      throw new Error('Failed to initialize microphone')
-    }
-
-    const dictationId = createMobileDictationId()
-    activeIdRef.current = dictationId
-
-    await startMobileDictationDesktopSession({
-      client,
-      dictationId,
-      generation,
-      getCurrentGeneration: () => generationRef.current,
-      getEnabled: () => enabledRef.current,
-      getActiveId: () => activeIdRef.current,
-      clearActiveId: (id) => {
-        if (activeIdRef.current === id) {
-          activeIdRef.current = null
+    let dictationId: string | null = null
+    try {
+      const permission = await requestMicrophonePermissionsAsync()
+      if (generationRef.current !== generation || !enabledRef.current) {
+        if (generationRef.current === generation) {
+          setStatus('idle')
         }
-      },
-      setIdle: () => setStatus('idle'),
-      keepAwakeOwner,
-      commitRecordingStart: () => {
-        acceptingChunksRef.current = true
-        pendingChunksRef.current.clear()
-        pendingAudioBudgetRef.current.reset()
-        if (!toggleRecording(true)) {
-          return false
-        }
-        setStatus('recording')
-        return true
-      },
-      rollbackRecordingStart: () => {
-        acceptingChunksRef.current = false
-        pendingChunksRef.current.clear()
-        pendingAudioBudgetRef.current.reset()
-        toggleRecording(false)
+        return
       }
-    })
-  }, [keepAwakeOwner])
+      if (!permission.granted) {
+        setStatus('idle')
+        throw new Error('Microphone permission denied')
+      }
+
+      const initialized = await initialize()
+      if (generationRef.current !== generation || !enabledRef.current) {
+        void tearDown()
+        if (generationRef.current === generation) {
+          setStatus('idle')
+        }
+        return
+      }
+      if (!initialized) {
+        setStatus('idle')
+        throw new Error('Failed to initialize microphone')
+      }
+
+      dictationId = createMobileDictationId()
+      activeIdRef.current = dictationId
+
+      await startMobileDictationDesktopSession({
+        client,
+        dictationId,
+        generation,
+        getCurrentGeneration: () => generationRef.current,
+        getEnabled: () => enabledRef.current,
+        getActiveId: () => activeIdRef.current,
+        clearActiveId: (id) => {
+          if (activeIdRef.current === id) {
+            activeIdRef.current = null
+          }
+        },
+        setIdle: () => setStatus('idle'),
+        keepAwakeOwner,
+        commitRecordingStart: () => {
+          acceptingChunksRef.current = true
+          pendingChunksRef.current.clear()
+          pendingAudioBudgetRef.current.reset()
+          if (!toggleRecording(true)) {
+            return false
+          }
+          setStatus('recording')
+          return true
+        },
+        rollbackRecordingStart: () => {
+          acceptingChunksRef.current = false
+          pendingChunksRef.current.clear()
+          pendingAudioBudgetRef.current.reset()
+          toggleRecording(false)
+        }
+      })
+    } catch (err) {
+      // Why: permission/native/RPC startup failures must leave "starting" and
+      // reach the shared error handler so setup-required errors open the sheet.
+      if (generationRef.current !== generation || !enabledRef.current) {
+        return
+      }
+      const normalized = err instanceof Error ? err : new Error(String(err))
+      if (dictationId && activeIdRef.current === dictationId) {
+        failActiveDictation(dictationId, normalized)
+      } else {
+        reportError(normalized)
+      }
+      throw normalized
+    }
+  }, [failActiveDictation, keepAwakeOwner, reportError])
 
   const stop = useCallback(async () => {
     const client = clientRef.current
@@ -261,11 +277,13 @@ export function useMobileDictation(options: UseMobileDictationOptions): UseMobil
     activeIdRef.current = null
     finishingIdRef.current = null
     closeDictationAudio(dictationId)
+    // Local recording and UI are already canceled; remote cleanup is best effort
+    // and must not leave the mic button stuck while its RPC is in flight.
+    setStatus('idle')
+    setError(null)
     if (client && dictationId) {
       await client.sendRequest('speech.dictation.cancel', { dictationId }).catch(() => undefined)
     }
-    setStatus('idle')
-    setError(null)
   }, [closeDictationAudio])
 
   useMobileDictationForegroundKeepAwake(keepAwakeOwner, activeIdRef)
