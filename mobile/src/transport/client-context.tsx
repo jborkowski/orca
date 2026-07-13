@@ -20,38 +20,11 @@ import {
   type ReactNode
 } from 'react'
 import { connect, type RpcClient } from './rpc-client'
-import { connectionLogStore } from './connection-log-buffer'
 import { subscribeConnectionRevivalTriggers } from './connection-revival-triggers'
+import { HostClientOpenRegistry } from './host-client-open-registry'
 import { loadHosts, promoteHostEndpoint } from './host-store'
+import type { ContextValue, StoreEntry } from './rpc-client-context-types'
 import type { ConnectionState, HostProfile } from './types'
-
-type StoreEntry = {
-  client: RpcClient
-  state: ConnectionState
-  refCount: number
-  unsubState: () => void
-}
-
-type ContextValue = {
-  acquire: (hostId: string, host?: HostProfile) => RpcClient | null
-  release: (hostId: string) => void
-  forceReconnect: (hostId: string) => Promise<void>
-  closeHost: (hostId: string) => void
-  getState: (hostId: string) => ConnectionState
-  getReconnectAttempt: (hostId: string) => number
-  // Why: timestamp (ms epoch) of the last successful 'connected' state
-  // transition for this host, or null if never connected this session.
-  // Used by the UI to escalate "Reconnecting…" into a "host appears
-  // unreachable, re-pair?" prompt.
-  getLastConnectedAt: (hostId: string) => number | null
-  subscribeHostState: (hostId: string, listener: (state: ConnectionState) => void) => () => void
-  getAllClients: () => Array<{ hostId: string; client: RpcClient }>
-  subscribeAllHosts: (listener: () => void) => () => void
-  // Why: lets the home screen feed already-loaded HostProfiles in so we
-  // don't pay loadHosts() latency twice (once in the focus-effect, again
-  // inside openEntry).
-  primeHosts: (hosts: HostProfile[]) => void
-}
 
 const Ctx = createContext<ContextValue | null>(null)
 
