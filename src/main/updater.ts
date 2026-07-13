@@ -2,6 +2,7 @@
 import { app, BrowserWindow, powerMonitor } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import type { UpdateCheckOptions, UpdateStatus } from '../shared/types'
+import { getUpdateLatestDownloadUrl, isAutoUpdateDisabled } from '../shared/updater-feed'
 import { killAllPty } from './ipc/pty'
 import { withUpdaterSpan } from './observability/instrumentation'
 import { loadElectronAutoUpdater, type ElectronAutoUpdater } from './electron-updater-loader'
@@ -1026,7 +1027,7 @@ async function pinDefaultReleaseFeed(
   } else {
     clearPrereleaseFallbackContext()
     clearPublishingWindowLastGoodCheck()
-    const url = 'https://github.com/stablyai/orca/releases/latest/download'
+    const url = getUpdateLatestDownloadUrl()
     console.info(
       `[updater] release feed fallback: current=${currentVersion} includePrerelease=${includePrerelease} → ${url}`
     )
@@ -1378,6 +1379,9 @@ export function setupAutoUpdater(
   if (is.dev) {
     return
   }
+  if (isAutoUpdateDisabled()) {
+    return
+  }
 
   const autoUpdater = getAutoUpdater()
   autoUpdater.autoDownload = false
@@ -1413,7 +1417,7 @@ export function setupAutoUpdater(
   // moving /latest redirect changing between check and download.
   autoUpdater.setFeedURL({
     provider: 'generic',
-    url: 'https://github.com/stablyai/orca/releases/latest/download'
+    url: getUpdateLatestDownloadUrl()
   })
 
   if (autoUpdaterInitialized) {
