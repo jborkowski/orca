@@ -581,6 +581,8 @@ async function createServer(
     closeBeforeResponse?: boolean
     suppressReadyFrame?: boolean
     rejectAuthentication?: boolean
+    disableAutoPong?: boolean
+    silentMethods?: string[]
   } = {}
 ): Promise<TestServer> {
   const serverKeyPair = generateKeyPair()

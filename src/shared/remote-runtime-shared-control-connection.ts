@@ -38,7 +38,7 @@ export class RemoteRuntimeSharedControlConnection {
   private ws: WebSocket | null = null
   private sharedKey: Uint8Array | null = null
   private socketCleanup: (() => void) | null = null
-  private readyStableTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly readyStableReset: SharedControlReadyStableResetTimer
   private readonly recovery = new SharedControlRecovery()
   private intentionallyClosed = false
   private lastConnectedAt: number | null = null
@@ -309,9 +309,6 @@ export class RemoteRuntimeSharedControlConnection {
       getSocket: () => this.ws,
       reset: () => {
         this.recovery.reconnectAttempt = 0
-      },
-      clearCurrent: () => {
-        this.readyStableTimer = null
       }
     })
   }

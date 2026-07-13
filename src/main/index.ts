@@ -28,7 +28,8 @@ import { registerCoreHandlers } from './ipc/register-core-handlers'
 import { initObservability, shutdownObservability } from './observability'
 import { registerMobileHandlers } from './ipc/mobile'
 import { notifyAllRemoteRuntimeConnectionsMayBeAvailable } from './ipc/runtime-environment-request-connections'
-import { initTelemetry, shutdownTelemetry, trackAppOpenedOnce } from './telemetry/client'
+import { initTelemetry, shutdownTelemetry, track, trackAppOpenedOnce } from './telemetry/client'
+import { classifyError } from './telemetry/classify-error'
 import { runManagedHookInstallers } from './agent-hooks/install-telemetry'
 import {
   isAgentStatusHooksEnabled,
