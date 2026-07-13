@@ -40,7 +40,8 @@ export function UsageBar({
 }) {
   const { colors } = useMobileTheme()
   const styles = useMemo(() => createUsageBarStyles(colors), [colors])
-  const remaining = usedPercent == null ? null : Math.max(0, Math.min(100, 100 - usedPercent))
+  // Why: round then clamp so bar width, color, and label share one value.
+  const used = usedPercent == null ? null : Math.max(0, Math.min(100, Math.round(usedPercent)))
   const barColor =
     used == null
       ? colors.textMuted

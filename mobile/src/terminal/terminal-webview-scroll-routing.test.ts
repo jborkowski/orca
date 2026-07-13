@@ -139,11 +139,10 @@ describe('TerminalWebView scroll routing', () => {
     expect(readyBlock).toContain('void p.finally')
   })
 
-  it('hides xterm scrollbars and drives the mobile scroll indicator from committed rows', () => {
+  it('hides wterm scrollbars and drives the mobile scroll indicator from committed rows', () => {
     expect(source).toContain('<div id="scroll-indicator"><div id="scroll-thumb"></div></div>')
-    expect(source).toContain('.xterm .xterm-viewport::-webkit-scrollbar')
-    expect(source).toContain('.xterm .xterm-scrollable-element > .xterm-scrollbar')
-    expect(source).toContain('overflow-y: hidden !important;')
+    expect(source).toContain('.wterm::-webkit-scrollbar')
+    expect(source).toContain('overflow: hidden !important;')
     expect(source).toContain('display: none !important;')
     expect(source).toContain('function updateScrollIndicator(reveal)')
     expect(source).toContain('buffer.viewportY / maxViewportY')

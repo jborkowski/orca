@@ -4,18 +4,20 @@
 // in-app/phone browser). Regression guard for taps that jitter a few pixels —
 // those were being swallowed because the tap shared the long-press slop gate.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { XTERM_HTML } from './terminal-webview-html'
+import { WTERM_HTML } from './terminal-webview-html'
 
 function iifeSource(): string {
-  const start = XTERM_HTML.indexOf('(function() {')
-  const end = XTERM_HTML.lastIndexOf('})();')
-  return XTERM_HTML.slice(start, end + '})();'.length)
+  // The wterm compatibility adapter has its own closures; anchor on the
+  // document controller script so this harness cannot enter one of them.
+  const start = WTERM_HTML.indexOf('<script>\n(function() {') + '<script>\n'.length
+  const end = WTERM_HTML.lastIndexOf('})();')
+  return WTERM_HTML.slice(start, end + '})();'.length)
 }
 
 function bodyMarkup(): string {
-  const start = XTERM_HTML.indexOf('<body>') + '<body>'.length
-  const end = XTERM_HTML.indexOf('<script>', start)
-  return XTERM_HTML.slice(start, end)
+  const start = WTERM_HTML.indexOf('<body>') + '<body>'.length
+  const end = WTERM_HTML.indexOf('<script>', start)
+  return WTERM_HTML.slice(start, end)
 }
 
 // Minimal xterm stub: one scrollback line containing a URL, fixed 8x15 cells.

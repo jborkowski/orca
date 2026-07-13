@@ -4,7 +4,7 @@ import {
   SOURCE_CONTROL_HUB_TAB_LABELS,
   type SourceControlHubTab
 } from './mobile-source-control-hub-tab'
-import { hubStyles } from './mobile-source-control-hub-styles'
+import { useMobileSourceControlHubStyles } from './mobile-source-control-hub-styles'
 
 type Props = {
   active: SourceControlHubTab
@@ -14,6 +14,7 @@ type Props = {
 // The hub's top-level lens switcher. Switching is local state (no route push) so
 // scroll position and the shared branch card persist across Changes/PR/History.
 export function MobileSourceControlSegments({ active, onSelect }: Props) {
+  const hubStyles = useMobileSourceControlHubStyles()
   return (
     <View style={hubStyles.segments} accessibilityRole="tablist">
       {SOURCE_CONTROL_HUB_TABS.map((tab) => {

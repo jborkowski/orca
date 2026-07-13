@@ -36,11 +36,10 @@ import type {
 import {
   asError,
   closeSocketBestEffort,
-  isBrowserScreencastReadyResult,
+  isBrowserScreencastReadyResult as isStreamingSubscriptionReadyResult,
   isTerminalSubscribedResult
 } from './rpc-client-websocket-state'
 import {
-  ACTIVITY_PROBE_INTERVAL_MS,
   AUTH_RETRY_BUDGET,
   CONNECT_TIMEOUT_MS,
   createConnectionLogEmitter,
@@ -52,6 +51,7 @@ import {
   STABLE_CONNECTION_RESET_MS,
   WEBSOCKET_CONNECTING_STATE
 } from './rpc-client-recovery-policy'
+import { createRpcClientActivityProbe } from './rpc-client-activity-probe'
 
 export type { ConnectOptions, RpcClient } from './rpc-client-contract'
 
@@ -80,7 +80,6 @@ export function connect(
   let connectTimer: ReturnType<typeof setTimeout> | null = null
   let handshakeTimer: ReturnType<typeof setTimeout> | null = null
   let stableConnectionTimer: ReturnType<typeof setTimeout> | null = null
-  let activityProbeTimer: ReturnType<typeof setInterval> | null = null
   let intentionallyClosed = false
   // Why: consecutive auth rejections since the last successful connect. We
   // tolerate up to AUTH_RETRY_BUDGET (issue #5200) before latching auth-failed
@@ -112,6 +111,14 @@ export function connect(
   let pendingBrowserScreencastRequestId: string | null = null
   const stateListeners = new Set<(state: ConnectionState) => void>()
   const connectWaiters: ConnectWaiter[] = []
+  const activityProbe = createRpcClientActivityProbe({
+    getState: () => state,
+    getSocket: () => ws,
+    nextRequestId: nextId,
+    getInboundSequence: () => inboundSequence,
+    pendingRequests: pending,
+    sendProbe: (id) => sendEncrypted({ id, deviceToken, method: 'status.get' })
+  })
 
   if (onStateChange) {
     stateListeners.add(onStateChange)
@@ -397,7 +404,7 @@ export function connect(
             scheduleStableConnectionReset(openingWs)
             promoteAuthenticatedEndpoint(selectedEndpoint)
             emitLog('success', 'Authenticated', 'Channel ready for RPC')
-            startActivityProbe()
+            activityProbe.start()
             for (const [id, stream] of streamListeners) {
               if (stream.cancelled) {
                 removeStreamListener(id)
@@ -650,7 +657,7 @@ export function connect(
       clearTimeout(handshakeTimer)
       handshakeTimer = null
     }
-    stopActivityProbe()
+    activityProbe.stop()
     if (intentionallyClosed) {
       console.log('[net] handleSocketClosed — intentional close')
       setState('disconnected')
@@ -760,20 +767,12 @@ export function connect(
         parked
       })
       rejectConnectWaiters('Connection retry limit reached')
-    } else {
-      delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)]!
-      reconnectAttempt++
+      return
     }
-    console.log('[net] scheduleReconnect', {
-      delayMs: delay,
-      attempt: reconnectAttempt,
-      trickle: pastGiveUpCap
-    })
-    emitLog(
-      'info',
-      `Reconnect scheduled in ${delay}ms`,
-      pastGiveUpCap ? `Attempt ${reconnectAttempt} (slow retry)` : `Attempt ${reconnectAttempt}`
-    )
+    const delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)]!
+    reconnectAttempt++
+    console.log('[net] scheduleReconnect', { delayMs: delay, attempt: reconnectAttempt })
+    emitLog('info', `Reconnect scheduled in ${delay}ms`, `Attempt ${reconnectAttempt}`)
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null
       openConnection()
@@ -826,67 +825,11 @@ export function connect(
       clearTimeout(handshakeTimer)
       handshakeTimer = null
     }
-    stopActivityProbe()
+    activityProbe.stop()
     ws = null
     sharedKey = null
     markStreamsForReplay()
     rejectAllPending(reason)
-  }
-
-  // Why: app-level liveness probe — see ACTIVITY_PROBE_INTERVAL_MS comment
-  // at the top of the file. Fires while the channel is in 'connected'
-  // state, sends a tiny status.get, and force-closes the WS if the probe
-  // fails (which the existing onclose path then turns into a reconnect).
-  function runActivityProbe() {
-    if (state !== 'connected' || !ws) {
-      return
-    }
-    const probeWs = ws
-    const id = nextId()
-    const probeInboundSequence = inboundSequence
-    let timedOut = false
-    const timeout = setTimeout(() => {
-      timedOut = true
-      pending.delete(id)
-      if (inboundSequence > probeInboundSequence) {
-        return
-      }
-      console.log('[net] activity-probe TIMEOUT — forcing reconnect', { state })
-      // Why: stale probe timers must not close a replacement socket.
-      if (probeWs === ws && probeWs.readyState === WebSocket.OPEN) {
-        closeSocketBestEffort(probeWs)
-      }
-    }, 8_000)
-    pending.set(id, {
-      resolve: () => {
-        if (timedOut) {
-          return
-        }
-        clearTimeout(timeout)
-      },
-      reject: () => {
-        if (timedOut) {
-          return
-        }
-        clearTimeout(timeout)
-      }
-    })
-    if (!sendEncrypted({ id, deviceToken, method: 'status.get' })) {
-      clearTimeout(timeout)
-      pending.delete(id)
-    }
-  }
-
-  function startActivityProbe() {
-    stopActivityProbe()
-    activityProbeTimer = setInterval(runActivityProbe, ACTIVITY_PROBE_INTERVAL_MS)
-  }
-
-  function stopActivityProbe() {
-    if (activityProbeTimer) {
-      clearInterval(activityProbeTimer)
-      activityProbeTimer = null
-    }
   }
 
   function rejectAllPending(reason: string) {
@@ -1251,7 +1194,7 @@ export function connect(
         clearTimeout(handshakeTimer)
         handshakeTimer = null
       }
-      stopActivityProbe()
+      activityProbe.stop()
       closeSocketBestEffort(ws)
       ws = null
       sharedKey = null
@@ -1270,8 +1213,8 @@ export function connect(
       // blackholes input. Probe now so death is detected in ≤8s instead
       // of waiting out the 20s interval (issue #5049).
       console.log('[net] connection-may-be-available — probing live connection')
-      startActivityProbe()
-      runActivityProbe()
+      activityProbe.start()
+      activityProbe.run()
       return
     }
     if (state === 'reconnecting' || parked) {

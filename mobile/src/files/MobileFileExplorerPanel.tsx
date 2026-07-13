@@ -20,8 +20,6 @@ import {
   type MobileDirEntry
 } from './file-tree'
 import type { RpcSuccess } from '../transport/types'
-import { triggerSelection } from '../platform/haptics'
-import { spacing } from '../theme/mobile-theme'
 import { useMobileTheme } from '../theme/mobile-theme-context'
 import { createMobileFileExplorerStyles } from './mobile-file-explorer-styles'
 import {
@@ -36,7 +34,6 @@ import {
   isMobileMethodUnavailableError,
   type LegacyFilesListResult
 } from './file-list-fallback'
-import { fileExplorerStyles as styles } from './mobile-file-explorer-styles'
 import { MobileFileExplorerRow } from './mobile-file-explorer-row'
 import { navigateToMobileFilePreview } from './mobile-file-preview-navigation'
 

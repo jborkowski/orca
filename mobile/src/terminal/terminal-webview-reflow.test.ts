@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { XTERM_HTML } from './terminal-webview-html'
+import { WTERM_HTML } from './terminal-webview-html'
 
 // The reflow logic lives as injected in-WebView JS; the message dispatch and
 // handle wiring live in terminal-webview-html.ts / TerminalWebView.tsx. Assert
@@ -57,23 +57,23 @@ describe('terminal WebView reflow', () => {
   })
 
   // Why: the raw-source assertions above pass even if the reflow module is
-  // dropped from the XTERM_HTML concatenation (a broken/removed import or an
+  // dropped from the WTERM_HTML concatenation (a broken/removed import or an
   // emptied TERMINAL_REFLOW_JS leaves the `${...}` placeholder in the template
   // but never injects the routine). That was the regression class reported when
   // a sibling refactor extracted the tap dispatcher next to the reflow inject.
   // Guard the *assembled* document so the routine and its dispatch are really
   // present in what the WebView runs.
-  describe('assembled XTERM_HTML', () => {
+  describe('assembled WTERM_HTML', () => {
     it('still injects the reflow routine (placeholder fully expanded)', () => {
-      expect(XTERM_HTML).toContain('function reflow(cols, rows) {')
-      expect(XTERM_HTML).toContain('term.resize(nextCols, nextRows);')
+      expect(WTERM_HTML).toContain('function reflow(cols, rows) {')
+      expect(WTERM_HTML).toContain('term.resize(nextCols, nextRows);')
       // No unexpanded template placeholder for the injected reflow JS.
-      expect(XTERM_HTML).not.toContain('TERMINAL_REFLOW_JS}')
+      expect(WTERM_HTML).not.toContain('TERMINAL_REFLOW_JS}')
     })
 
     it('still routes the reflow message to the injected routine', () => {
-      expect(XTERM_HTML).toContain("} else if (msg.type === 'reflow') {")
-      expect(XTERM_HTML).toContain('reflow(msg.cols, msg.rows);')
+      expect(WTERM_HTML).toContain("} else if (msg.type === 'reflow') {")
+      expect(WTERM_HTML).toContain('reflow(msg.cols, msg.rows);')
     })
 
     it('still wires the message listener after the reflow routine and tap dispatcher', () => {
@@ -81,9 +81,9 @@ describe('terminal WebView reflow', () => {
       // message listener actually attaches. The tap dispatcher is injected
       // between them; if its IIFE-time code threw, the listener below would
       // never bind and reflow messages would silently no-op.
-      const reflowAt = XTERM_HTML.indexOf('function reflow(cols, rows) {')
-      const dispatchAt = XTERM_HTML.indexOf("var dispatch = { mode: 'idle'")
-      const listenerAt = XTERM_HTML.indexOf("window.addEventListener('message'")
+      const reflowAt = WTERM_HTML.indexOf('function reflow(cols, rows) {')
+      const dispatchAt = WTERM_HTML.indexOf("var dispatch = { mode: 'idle'")
+      const listenerAt = WTERM_HTML.indexOf("window.addEventListener('message'")
       expect(reflowAt).toBeGreaterThanOrEqual(0)
       expect(dispatchAt).toBeGreaterThan(reflowAt)
       expect(listenerAt).toBeGreaterThan(dispatchAt)

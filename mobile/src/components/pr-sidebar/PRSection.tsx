@@ -19,6 +19,7 @@ type Props = {
 export function PRSection({ title, trailing, children }: Props) {
   const { colors, chrome } = useMobileTheme()
   const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+  const showHeader = Boolean(title) || trailing != null
 
   return (
     <View style={styles.section}>

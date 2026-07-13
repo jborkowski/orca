@@ -1,5 +1,5 @@
 // Plain-JS file-path-under-tap detection, injected verbatim into the terminal
-// WebView's xterm script (XTERM_HTML). It is interpolated with ${...}, so the
+// WebView terminal script (WTERM_HTML). It is interpolated with ${...}, so the
 // regex backslashes here are single (the real runtime form) — not the doubled
 // form a backtick template literal would otherwise require.
 //

@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
-import { ChevronLeft, RefreshCw, X } from 'lucide-react-native'
+import { ChevronLeft, ExternalLink, RefreshCw, X } from 'lucide-react-native'
 import { useMobileTheme } from '../theme/mobile-theme-context'
 import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 

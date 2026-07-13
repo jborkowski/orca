@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 import { Code, Pencil } from 'lucide-react-native'
 import { MobileMarkdown } from '../components/MobileMarkdown'

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { View, Text, Pressable, FlatList } from 'react-native'
+import { Alert, View, Text, Pressable, FlatList } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
 import {
@@ -1140,4 +1140,3 @@ const ONBOARDING_STEPS = [
     desc: 'Your desktop will appear here. Everything is encrypted end-to-end.'
   }
 ]
-

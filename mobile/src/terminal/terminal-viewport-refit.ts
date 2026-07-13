@@ -127,7 +127,7 @@ export function useTerminalViewportRefit(options: TerminalViewportRefitOptions):
               rpc.updateTerminalSubscriptionViewport(handle, dims)
               if (isTerminalUpdateViewportApplied(response)) {
                 // Why: updateViewport reflows the server PTY and re-streams only
-                // the visible screen, so the WebView's local xterm scrollback
+                // the visible screen, so the WebView's local terminal scrollback
                 // stays wrapped at the old width. Reflow it locally only when
                 // the server actually applied phone-fit; desktop mode records
                 // the viewport but leaves the PTY at desktop dims.

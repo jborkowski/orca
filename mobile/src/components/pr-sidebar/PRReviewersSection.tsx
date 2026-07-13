@@ -5,6 +5,7 @@ import type { GitHubWorkItemDetails } from '../../../../src/shared/types'
 import type { RpcClient } from '../../transport/rpc-client'
 import type { MobilePrActions } from '../../session/use-mobile-pr-actions'
 import { useMobileTheme } from '../../theme/mobile-theme-context'
+import { isPrSidebarDetailsPlaceholder } from '../../session/mobile-pr-sidebar-state'
 import { getPRReviewerRows } from './pr-checks-presentation'
 import { ReviewerPickerDrawer } from './ReviewerPickerDrawer'
 import { PRSection } from './PRSection'
@@ -22,6 +23,10 @@ type Props = {
 export function PRReviewersSection({ details, actions, client, worktreeId }: Props) {
   const { colors, chrome } = useMobileTheme()
   const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+  // Null means the heavy detail payload is still loading; a placeholder means
+  // that phase failed and must not be presented as an empty reviewer list.
+  const loadingDetails = details === null
+  const detailsFailed = details != null && isPrSidebarDetailsPlaceholder(details)
   const authoritativeRows = useMemo(
     () =>
       details?.item && !isPrSidebarDetailsPlaceholder(details)

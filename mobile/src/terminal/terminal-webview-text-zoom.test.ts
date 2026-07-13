@@ -10,8 +10,8 @@ const terminalHtmlSource = readFileSync(
   new URL('./terminal-webview-html.ts', import.meta.url),
   'utf8'
 )
-const terminalWebglRecoverySource = readFileSync(
-  new URL('./terminal-webview-webgl-recovery-injected.ts', import.meta.url),
+const terminalWtermAdapterSource = readFileSync(
+  new URL('./terminal-webview-wterm-adapter-injected.ts', import.meta.url),
   'utf8'
 )
 
@@ -75,9 +75,9 @@ describe('TerminalWebView text zoom', () => {
     const end = terminalWebViewSource.indexOf('/>', start)
     expect(end).toBeGreaterThan(start)
     const webViewProps = terminalWebViewSource.slice(start, end)
-    expect(terminalHtmlSource).toContain('export const XTERM_WEBVIEW_SOURCE = { html: XTERM_HTML }')
-    expect(webViewProps).toContain('source={XTERM_WEBVIEW_SOURCE}')
-    expect(webViewProps).not.toContain('source={{ html: XTERM_HTML }}')
+    expect(terminalHtmlSource).toContain('export const WTERM_WEBVIEW_SOURCE = { html: WTERM_HTML }')
+    expect(webViewProps).toContain('source={WTERM_WEBVIEW_SOURCE}')
+    expect(webViewProps).not.toContain('source={{ html: WTERM_HTML }}')
   })
 
   it('forces the Claude status dot to text presentation before xterm writes', () => {
@@ -139,35 +139,34 @@ describe('TerminalWebView text zoom', () => {
     )
   })
 
-  it('loads Unicode 11 before replaying mobile terminal bytes', () => {
-    expect(terminalHtmlSource).toContain('XTERM_ENGINE_JS')
-    expect(terminalHtmlSource).toContain('window.Unicode11Addon.Unicode11Addon')
-    const open = terminalHtmlSource.indexOf('term.open(surface)')
-    const unicode = terminalHtmlSource.indexOf("term.unicode.activeVersion = '11'")
+  it('loads Ghostty before replaying mobile terminal bytes', () => {
+    expect(terminalHtmlSource).toContain('WTERM_ENGINE_JS')
+    expect(terminalHtmlSource).toContain('TERMINAL_WTERM_ADAPTER_JS')
+    expect(terminalWtermAdapterSource).toContain('window.GhosttyCore.load')
+    const open = terminalHtmlSource.indexOf('await term.open(surface)')
     const replay = terminalHtmlSource.indexOf('enqueueWrite(replayData)')
     expect(open).toBeGreaterThanOrEqual(0)
-    expect(unicode).toBeGreaterThan(open)
-    expect(replay).toBeGreaterThan(unicode)
+    // Replay is queued before the async WASM load, then drained only after open.
+    expect(replay).toBeLessThan(open)
+    expect(terminalHtmlSource.indexOf('ready = true', open)).toBeGreaterThan(open)
+    expect(terminalHtmlSource.indexOf('afterWritesDrained(function()', open)).toBeGreaterThan(open)
   })
 
-  it('uses the bundled WebGL-capable xterm stack and platform-safe font fallbacks', () => {
+  it('uses the bundled wterm/Ghostty stack and platform-safe font fallbacks', () => {
     expect(terminalHtmlSource).not.toContain('cdn.jsdelivr.net')
-    expect(terminalWebglRecoverySource).toContain('window.WebglAddon.WebglAddon')
+    expect(terminalWtermAdapterSource).toContain('new window.WTerm(element')
+    expect(terminalWtermAdapterSource).toContain('WTERM_GHOSTTY_WASM_URL')
     expect(terminalHtmlSource).toContain('function isIOSWebView()')
     expect(terminalHtmlSource).toContain('fontFamily: terminalFontFamily')
     expect(terminalHtmlSource).toContain("fontWeight: '300'")
     expect(terminalHtmlSource).toContain("fontWeightBold: '500'")
-    expect(terminalWebglRecoverySource).toContain('new window.WebglAddon.WebglAddon()')
+    expect(terminalHtmlSource).not.toContain('WebglAddon')
   })
 
-  it('skips WebGL when disableWebgl is set on init', () => {
-    expect(terminalHtmlSource).toContain('disableWebgl')
-    expect(terminalHtmlSource).toContain('!disableWebgl && window.WebglAddon')
-    const initStart = terminalHtmlSource.indexOf('function init(')
-    const handleInit = terminalHtmlSource.indexOf("if (msg.type === 'init') {")
-    expect(initStart).toBeGreaterThanOrEqual(0)
-    expect(handleInit).toBeGreaterThan(initStart)
-    expect(terminalHtmlSource.slice(handleInit, handleInit + 220)).toContain('msg.disableWebgl')
+  it('does not carry WebGL negotiation into the DOM renderer lifecycle', () => {
+    expect(terminalHtmlSource).not.toContain('disableWebgl')
+    expect(terminalHtmlSource).not.toContain('WebglAddon')
+    expect(terminalWtermAdapterSource).not.toContain('WebglAddon')
   })
 
   const IOS_IPHONE_NAVIGATOR = {

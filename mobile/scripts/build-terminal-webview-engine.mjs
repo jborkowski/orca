@@ -9,12 +9,16 @@ const mobileRoot = path.resolve(scriptDir, '..')
 const outputPath = path.join(mobileRoot, 'src', 'terminal', 'terminal-webview-engine.generated.ts')
 const target = 'chrome74'
 
-const packages = ['@xterm/xterm', '@xterm/addon-unicode11', '@xterm/addon-webgl']
+const packages = ['@wterm/dom', '@wterm/ghostty']
 
 async function readPackageVersion(packageName) {
-  // Why: a package.json module specifier must use '/' — path.join emits '\' on
-  // Windows, yielding an unresolvable bare specifier that fails postinstall there.
-  const packageJsonPath = require.resolve(`${packageName}/package.json`)
+  // Why: wterm does not export package.json; its ESM entry consistently lives
+  // under dist/, so resolve the manifest from the entry without a bare subpath.
+  const packageJsonPath = path.join(
+    path.dirname(require.resolve(packageName)),
+    '..',
+    'package.json'
+  )
   const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'))
   return `${packageName}@${packageJson.version}`
 }
@@ -27,41 +31,13 @@ async function buildEngineJs() {
   const result = await esbuild.build({
     stdin: {
       contents: `
-        import { Terminal } from '@xterm/xterm'
-        import { Unicode11Addon } from '@xterm/addon-unicode11'
-        import { WebglAddon } from '@xterm/addon-webgl'
+        import { WTerm } from '@wterm/dom'
+        import { GhosttyCore } from '@wterm/ghostty'
 
-        // Why: xterm reaches for these runtime APIs on the terminal-bringup path,
-        // and esbuild lowers syntax but not runtime APIs. Guarded shims let the
-        // chrome74-syntax bundle actually run on old WebViews (the #7030 goal)
-        // instead of throwing at construction and only surfacing the error overlay.
-
-        // WeakRef (Chrome 84+): lazily constructed in window-tracking paths.
-        // Strong retention is fine for a single-document terminal WebView.
-        if (typeof window.WeakRef === 'undefined') {
-          window.WeakRef = function WeakRefShim(target) { this.__target = target }
-          window.WeakRef.prototype.deref = function () { return this.__target }
-        }
-
-        // structuredClone (Chrome 98+): xterm clones its plain-data DEC-mode default
-        // objects at Terminal construction; a JSON round-trip clones those correctly
-        // (any undefined-valued keys drop, but every reader treats absent == undefined).
-        if (typeof window.structuredClone === 'undefined') {
-          window.structuredClone = function (value) { return JSON.parse(JSON.stringify(value)) }
-        }
-
-        // Element.prototype.replaceChildren (Chrome 86+): used on the row/selection
-        // render path; polyfill via remove-all + append (Chrome 54+, under the floor).
-        if (typeof Element !== 'undefined' && !Element.prototype.replaceChildren) {
-          Element.prototype.replaceChildren = function () {
-            while (this.firstChild) this.removeChild(this.firstChild)
-            this.append.apply(this, arguments)
-          }
-        }
-
-        window.Terminal = Terminal
-        window.Unicode11Addon = { Unicode11Addon }
-        window.WebglAddon = { WebglAddon }
+        // Why: the WebView document is offline and owns its transport; expose only
+        // the renderer/core constructors and let Orca supply the inlined WASM bytes.
+        window.WTerm = WTerm
+        window.GhosttyCore = GhosttyCore
       `,
       resolveDir: mobileRoot,
       sourcefile: 'terminal-webview-engine-entry.js'
@@ -71,6 +47,11 @@ async function buildEngineJs() {
     minify: true,
     platform: 'browser',
     target,
+    define: {
+      // Why: @wterm/ghostty computes a default URL at module evaluation even
+      // when Orca supplies an explicit data URL for its offline WASM payload.
+      'import.meta.url': '"file:///wterm/engine.js"'
+    },
     legalComments: 'none',
     write: false,
     logLevel: 'silent'
@@ -80,25 +61,22 @@ async function buildEngineJs() {
 }
 
 async function main() {
-  const [engineJs, rawEngineCss, ...versions] = await Promise.all([
+  const ghosttyPackageRoot = path.join(path.dirname(require.resolve('@wterm/ghostty')), '..')
+  const [engineJs, rawEngineCss, ghosttyWasm, ...versions] = await Promise.all([
     buildEngineJs(),
-    readFile(require.resolve('@xterm/xterm/css/xterm.css'), 'utf8'),
+    readFile(require.resolve('@wterm/dom/css'), 'utf8'),
+    readFile(path.join(ghosttyPackageRoot, 'wasm', 'ghostty-vt.wasm')),
     ...packages.map(readPackageVersion)
   ])
-  // Why: the no-external-URL regression gate bans http(s):// anywhere in the
-  // terminal document. These xmlns URIs live inside data: URLs (never fetched);
-  // percent-encoding the scheme colon satisfies the gate and URI-decodes back
-  // before the SVG is parsed.
-  const engineCss = rawEngineCss
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/http:\/\/www\.w3\.org\/2000\/svg/g, 'http%3A//www.w3.org/2000/svg')
+  const engineCss = rawEngineCss.replace(/\/\*[\s\S]*?\*\//g, '')
 
   const source = [
     '// Generated by scripts/build-terminal-webview-engine.mjs.',
     `// Packages: ${versions.join(', ')}.`,
     `// Target: ${target}. Do not edit by hand; regenerate via pnpm postinstall.`,
-    `export const XTERM_ENGINE_JS = ${JSON.stringify(htmlText(engineJs, 'script'))}`,
-    `export const XTERM_ENGINE_CSS = ${JSON.stringify(htmlText(engineCss, 'style'))}`,
+    `export const WTERM_ENGINE_JS = ${JSON.stringify(htmlText(engineJs, 'script'))}`,
+    `export const WTERM_ENGINE_CSS = ${JSON.stringify(htmlText(engineCss, 'style'))}`,
+    `export const WTERM_GHOSTTY_WASM_BASE64 = ${JSON.stringify(ghosttyWasm.toString('base64'))}`,
     ''
   ].join('\n')
 

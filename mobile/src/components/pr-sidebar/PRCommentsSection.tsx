@@ -53,7 +53,13 @@ const COMMENT_PAGE = 12
 // PR body + full comment timeline, mirroring the desktop PR page: a Description
 // card, then a Comments section with an audience filter (PRs only), threaded
 // review comments, reactions, and collapsible resolved threads.
-export function PRCommentsSection({ details, prState, prRepo, actions }: Props) {
+export function PRCommentsSection({
+  details,
+  prState,
+  prRepo,
+  actions,
+  botAuthorOverrides
+}: Props) {
   const { colors, chrome } = useMobileTheme()
   const styles = useMemo(() => createPrCommentsStyles(colors, chrome), [colors, chrome])
   const shared = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])

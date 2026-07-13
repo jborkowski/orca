@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import { GitBranch } from 'lucide-react-native'
-import { colors } from '../theme/mobile-theme'
-import { styles } from './mobile-source-control-styles'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 import { MobileSourceControlPrChip } from './MobileSourceControlPrChip'
 import type { MobilePrChipSummary } from './mobile-pr-chip-summary'
 import { mobileConflictAbortLabel } from './mobile-source-control-conflict-abort'
@@ -39,6 +39,8 @@ export function MobileSourceControlBranchCard({
   prChip,
   onOpenPr
 }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const showConflict = conflictOperation !== null && conflictOperation !== 'unknown'
   return (
     <View style={styles.summaryCard}>

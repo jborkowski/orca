@@ -4,7 +4,7 @@ const EINK_BLACK = '#111111'
 const EINK_WHITE = '#ffffff'
 
 // Why: e-ink panels need a flat light terminal palette with high-contrast ANSI
-// so TUI output stays readable without WebGL dithering or translucent tints.
+// so TUI output stays readable without translucent tints.
 export const EINK_TERMINAL_THEME: RuntimeMobileTerminalTheme = {
   mode: 'light',
   theme: {

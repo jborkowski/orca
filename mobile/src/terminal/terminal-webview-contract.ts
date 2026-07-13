@@ -42,10 +42,8 @@ export type TerminalSelectionEvents = {
 export type TerminalWebViewProps = {
   style?: StyleProp<ViewStyle>
   terminalTheme?: MobileTerminalTheme
-  // Why: e-ink panels use the DOM renderer to avoid WebGL refresh artifacts.
-  disableWebgl?: boolean
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
-  // xterm fontSize alone cannot drive apparent size because fitting cancels it.
+  // renderer fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number
   onWebReady?: () => void
   onEngineError?: (message: string) => void
@@ -64,7 +62,7 @@ export type TerminalWebViewHandle = {
     oscLinks?: TerminalOscLinkRange[]
   ) => void
   resize: (cols: number, rows: number) => void
-  // Why: reflow the local xterm buffer (scrollback included) to a new width
+  // Why: reflow the local terminal buffer (scrollback included) to a new width
   // after a server-side PTY reflow, so older wrapped lines rewrap to match the
   // latest output. No-op on the alternate screen.
   reflow: (cols: number, rows: number) => void

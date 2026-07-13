@@ -196,7 +196,7 @@ mobile/
 │   ├── index.tsx          # Home screen — paired hosts list
 │   └── pair-scan.tsx      # QR code scanning screen
 ├── src/
-│   ├── terminal/          # Terminal WebView and xterm bridge
+│   ├── terminal/          # Terminal WebView and wterm/Ghostty bridge
 │   └── transport/         # WebSocket RPC client
 ├── scripts/
 │   ├── test-subscribe.ts  # Desktop streaming repro without a phone

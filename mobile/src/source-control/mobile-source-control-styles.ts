@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { StyleSheet } from 'react-native'
-import { radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
 import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
 import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
 import { useMobileTheme } from '../theme/mobile-theme-context'
@@ -91,6 +91,7 @@ export function createMobileSourceControlStyles(
     },
     countRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: spacing.md,
       marginTop: spacing.sm
     },
@@ -100,8 +101,12 @@ export function createMobileSourceControlStyles(
     },
     conflictRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
-      gap: spacing.sm
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+      alignSelf: 'flex-start',
+      maxWidth: '100%'
     },
     conflictText: {
       color: colors.statusAmber,
@@ -109,18 +114,40 @@ export function createMobileSourceControlStyles(
       textTransform: 'capitalize'
     },
     abortButton: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-      borderRadius: radii.button,
-      borderWidth: 1,
-      borderColor: colors.statusAmber
+      ...chrome.outlineButton,
+      minHeight: 32,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderColor: colors.statusAmber,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0
     },
     abortPressed: chrome.listRowPressed,
+    abortButtonDisabled: {
+      opacity: 0.45
+    },
     abortText: {
       color: colors.statusAmber,
-      fontSize: typography.metaSize,
+      fontSize: typography.bodySize,
       fontWeight: '600',
       textTransform: 'capitalize'
+    },
+    reconnectBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginHorizontal: spacing.lg,
+      marginTop: spacing.lg,
+      marginBottom: -spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      ...chrome.sectionCard,
+      borderColor: colors.statusAmber
+    },
+    reconnectBannerText: {
+      color: colors.textPrimary,
+      fontSize: typography.metaSize
     },
     actionError: {
       marginTop: spacing.sm,

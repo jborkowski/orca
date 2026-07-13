@@ -7,7 +7,18 @@ import { useMobileSourceControlActionSheet } from './use-mobile-source-control-a
 import { MobileSourceControlHeader } from './MobileSourceControlHeader'
 import { MobileSourceControlContent } from './MobileSourceControlContent'
 import { MobileSourceControlModals } from './MobileSourceControlModals'
+import { MobileSourceControlSegments } from './MobileSourceControlSegments'
+import { MobileSourceControlBranchCard } from './MobileSourceControlBranchCard'
+import { MobileGitHistoryList } from './MobileGitHistoryList'
 import { useMobileSourceControlStyles } from './mobile-source-control-styles'
+import { useMobileSourceControlHubStyles } from './mobile-source-control-hub-styles'
+import type { SourceControlHubTab } from './mobile-source-control-hub-tab'
+import { buildMobilePrChipSummary, countUnresolvedReviewThreads } from './mobile-pr-chip-summary'
+import { isMobileConflictAborting } from './mobile-source-control-conflict-abort'
+import { useMobilePrSidebarController } from '../session/use-mobile-pr-sidebar-controller'
+import { prSidebarDetailsNeedFetch } from '../session/mobile-pr-sidebar-state'
+import { MobilePrViewPanelBody } from '../components/pr-sidebar/MobilePrViewPanel'
+import { openMobilePrUrl } from '../components/MobilePrComposeSheet'
 
 export type MobileSourceControlPanelProps = {
   hostId: string
@@ -34,8 +45,44 @@ export function MobileSourceControlPanel({
   onFileOpenStart,
   onOpenedFileDiff
 }: MobileSourceControlPanelProps) {
+  const [activeTab, setActiveTab] = useState<SourceControlHubTab>(initialTab)
+  // Preserve scroll and fetch state after first visiting Changes or History.
+  // PR unmounts when inactive because its heavy body contains WebViews.
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<SourceControlHubTab>>(
+    () => new Set<SourceControlHubTab>([initialTab])
+  )
+  const [historyRefreshNonce, setHistoryRefreshNonce] = useState(0)
+
+  // Expo Router can reuse this screen when only the tab query changes.
+  useEffect(() => {
+    setActiveTab(initialTab)
+    setVisitedTabs((previous) => {
+      if (previous.has(initialTab)) {
+        return previous
+      }
+      const next = new Set(previous)
+      next.add(initialTab)
+      return next
+    })
+  }, [initialTab])
+
+  const selectTab = useCallback((tab: SourceControlHubTab) => {
+    setActiveTab(tab)
+    setVisitedTabs((previous) => {
+      if (previous.has(tab)) {
+        return previous
+      }
+      const next = new Set(previous)
+      next.add(tab)
+      return next
+    })
+  }, [])
+  const openHistoryTab = useCallback(() => selectTab('history'), [selectTab])
+  const openPrTab = useCallback(() => selectTab('pr'), [selectTab])
+
   const { colors } = useMobileTheme()
   const styles = useMobileSourceControlStyles()
+  const hubStyles = useMobileSourceControlHubStyles()
   const state = useMobileSourceControlState({
     hostId,
     worktreeId,

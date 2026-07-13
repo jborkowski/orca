@@ -79,7 +79,7 @@ export const URL_TAP_WEBVIEW_JS = `
   }
 
   // Why: OSC 8 links can render as labels like "#1234"; the URI lives in
-  // xterm's internal link service, so every access is guarded and falls through.
+  // a renderer's internal link service, so every access is guarded and falls through.
   function oscLinkService() {
     try {
       var core = term && term._core;

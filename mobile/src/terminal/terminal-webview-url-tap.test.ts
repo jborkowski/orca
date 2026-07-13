@@ -11,7 +11,7 @@ import {
   resolveTerminalOscFileTap,
   resolveTerminalFileUrlTap
 } from './terminal-webview-url-tap'
-import { XTERM_HTML } from './terminal-webview-html'
+import { WTERM_HTML } from './terminal-webview-html'
 
 type FileTapResolverCase = {
   name: string
@@ -193,17 +193,17 @@ describe('findUrlAtColumn', () => {
   })
 
   it('injects URL and OSC tap handling into the WebView document', () => {
-    expect(XTERM_HTML).toContain('function findUrlAtColumn(')
-    expect(XTERM_HTML).toContain('function findFileUrlAtColumn(')
-    expect(XTERM_HTML).toContain('function fileUrlAtViewportPoint(')
-    expect(XTERM_HTML).toContain('function urlAtViewportPoint(')
-    expect(XTERM_HTML).toContain(JSON.stringify(TERMINAL_HTTP_URL_REGEX_SOURCE))
-    expect(XTERM_HTML).toContain('function oscLinkAtViewportPoint(')
-    expect(XTERM_HTML).toContain('function resolveTerminalOscFileTap(')
-    expect(XTERM_HTML).toContain('function resolveTerminalFileUrlTap(')
-    expect(XTERM_HTML).toContain('function isLocalFileUriHostname(')
-    expect(XTERM_HTML).toContain('return parsePathLineCol(value);')
-    expect(XTERM_HTML).toContain('function notifyTerminalSurfaceTap(')
-    expect(XTERM_HTML).toContain("notify({ type: 'open-url', url: tappedUrl });")
+    expect(WTERM_HTML).toContain('function findUrlAtColumn(')
+    expect(WTERM_HTML).toContain('function findFileUrlAtColumn(')
+    expect(WTERM_HTML).toContain('function fileUrlAtViewportPoint(')
+    expect(WTERM_HTML).toContain('function urlAtViewportPoint(')
+    expect(WTERM_HTML).toContain(JSON.stringify(TERMINAL_HTTP_URL_REGEX_SOURCE))
+    expect(WTERM_HTML).toContain('function oscLinkAtViewportPoint(')
+    expect(WTERM_HTML).toContain('function resolveTerminalOscFileTap(')
+    expect(WTERM_HTML).toContain('function resolveTerminalFileUrlTap(')
+    expect(WTERM_HTML).toContain('function isLocalFileUriHostname(')
+    expect(WTERM_HTML).toContain('return parsePathLineCol(value);')
+    expect(WTERM_HTML).toContain('function notifyTerminalSurfaceTap(')
+    expect(WTERM_HTML).toContain("notify({ type: 'open-url', url: tappedUrl });")
   })
 })

@@ -144,6 +144,12 @@ export function createMobilePrSidebarStyles(colors: MobileThemeColors, chrome: M
       color: colors.textSecondary,
       fontSize: typography.metaSize
     },
+    reviewersStatus: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm
+    },
     summaryLabel: {
       fontSize: typography.bodySize,
       fontWeight: '700'

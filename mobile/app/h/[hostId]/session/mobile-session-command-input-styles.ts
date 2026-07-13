@@ -71,9 +71,15 @@ export function createMobileSessionCommandInputStyles(
       zIndex: 20
     },
     accessoryBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
       borderTopWidth: 1,
       borderTopColor: colors.borderSubtle,
       backgroundColor: colors.bgPanel
+    },
+    accessoryScroll: {
+      flex: 1,
+      minWidth: 0
     },
     accessoryContent: {
       paddingHorizontal: spacing.sm,
@@ -111,6 +117,28 @@ export function createMobileSessionCommandInputStyles(
     },
     accessoryKeyTextDisabled: {
       color: colors.textMuted
+    },
+    keyboardDismissKey: {
+      ...chrome.outlineButton,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: spacing.sm,
+      marginVertical: spacing.xs,
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: 0,
+      minWidth: 36,
+      height: 28
+    },
+    keyboardDismissGlyph: {
+      alignItems: 'center',
+      height: 18,
+      justifyContent: 'flex-start',
+      position: 'relative',
+      width: 18
+    },
+    keyboardDismissChevron: {
+      bottom: -2,
+      position: 'absolute'
     },
     inputBar: {
       flexDirection: 'row',

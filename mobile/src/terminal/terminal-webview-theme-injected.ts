@@ -22,6 +22,10 @@ export const TERMINAL_WEBVIEW_THEME_JS = `
     var background = terminalTheme.background || '${colors.terminalBg}';
     document.documentElement.style.background = background;
     document.body.style.background = background;
+    document.documentElement.style.setProperty(
+      '--orca-selection-bg',
+      terminalTheme.selectionBackground || defaultTheme.selectionBackground
+    );
     if (term) term.options.theme = terminalTheme;
   }
 `

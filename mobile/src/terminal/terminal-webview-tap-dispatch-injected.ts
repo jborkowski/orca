@@ -1,4 +1,4 @@
-// Document-level latching touch dispatcher, injected into XTERM_HTML. Extracted
+// Document-level latching touch dispatcher, injected into WTERM_HTML. Extracted
 // from terminal-webview-html.ts to keep that file within its max-lines budget.
 // Closes over host-IIFE state/functions: dispatch/tapCandidate/longPress*,
 // viewportToCell, enterSelect, cancelSelect, handleDragMove, stopEdgeScroll,

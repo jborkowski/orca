@@ -72,11 +72,17 @@ export default function PairScanScreen() {
     let cancelled = false
     // Why: some Android devices advertise camera permission despite having no
     // usable camera; mounting CameraView there crashes inside CameraX.
-    void CameraView.isAvailableAsync().then((available) => {
-      if (!cancelled) {
-        setCameraAvailable(available)
-      }
-    })
+    void CameraView.isAvailableAsync()
+      .then((available) => {
+        if (!cancelled) {
+          setCameraAvailable(available)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCameraAvailable(false)
+        }
+      })
     return () => {
       cancelled = true
     }
@@ -264,15 +270,7 @@ export default function PairScanScreen() {
     SCAN_RETICLE_MAX_SIZE
   )
 
-  if (!permission || cameraAvailable === null) {
-    return (
-      <View ref={setPairScanRootRef} style={[styles.container, containerPadding]}>
-        <ActivityIndicator color={colors.textSecondary} />
-      </View>
-    )
-  }
-
-  if (!cameraAvailable) {
+  if (cameraAvailable !== true) {
     return (
       <View ref={setPairScanRootRef} style={[styles.container, containerPadding]}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -299,6 +297,14 @@ export default function PairScanScreen() {
           onSubmit={handlePasteSubmit}
           onCancel={() => setPasteVisible(false)}
         />
+      </View>
+    )
+  }
+
+  if (!permission) {
+    return (
+      <View ref={setPairScanRootRef} style={[styles.container, containerPadding]}>
+        <ActivityIndicator color={colors.textSecondary} />
       </View>
     )
   }

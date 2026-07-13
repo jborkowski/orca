@@ -3,6 +3,7 @@ import {
   View,
   Pressable,
   StyleSheet,
+  Platform,
   useWindowDimensions,
   ScrollView,
   Keyboard,

@@ -82,6 +82,35 @@ export function createMobileFileExplorerStyles(
       color: colors.textMuted,
       fontSize: 11
     },
+    inlineStatusRow: {
+      minHeight: 36,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingRight: spacing.md
+    },
+    inlineStatusText: {
+      color: colors.textSecondary,
+      fontSize: typography.metaSize
+    },
+    inlineErrorText: {
+      flex: 1,
+      minWidth: 0,
+      color: colors.statusRed,
+      fontSize: typography.metaSize
+    },
+    inlineRetryButton: {
+      ...chrome.outlineButton,
+      minHeight: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.md
+    },
+    inlineRetryText: {
+      color: colors.textPrimary,
+      fontSize: typography.metaSize,
+      fontWeight: '600'
+    },
     state: {
       flex: 1,
       alignItems: 'center',

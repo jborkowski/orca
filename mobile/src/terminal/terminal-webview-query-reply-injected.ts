@@ -23,7 +23,7 @@ export const TERMINAL_QUERY_REPLY_JS = `
 
   function attachTerminalQueryReplyBridge(term, gen) {
     // Why: parser replies require stdin enabled, but mobile input is owned by
-    // native controls. Keep xterm's textarea inert for touch/hardware keys.
+    // native controls. Keep wterm's textarea inert for touch/hardware keys.
     try {
       term.attachCustomKeyEventHandler(function() { return false; });
       if (term.textarea) {

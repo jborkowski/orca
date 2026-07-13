@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import {
   ChevronDown,
@@ -8,9 +9,11 @@ import {
   Image as ImageIcon
 } from 'lucide-react-native'
 import { triggerSelection } from '../platform/haptics'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
 import { type FileExplorerRow, isMarkdownPath, type TreeNode } from './file-tree'
-import { fileExplorerStyles as styles } from './mobile-file-explorer-styles'
+import { createMobileFileExplorerStyles } from './mobile-file-explorer-styles'
 import { canPreviewMobileFileRow } from './mobile-file-preview-navigation'
 
 type Props = {
@@ -23,6 +26,8 @@ type Props = {
 
 export function MobileFileExplorerRow(props: Props) {
   const { item, expanded, onPreviewFile, onRetryDirectory, onToggleDirectory } = props
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFileExplorerStyles(colors, chrome), [colors, chrome])
 
   if (item.kind === 'loading') {
     return (
@@ -60,6 +65,8 @@ export function MobileFileExplorerRow(props: Props) {
       <TreeRow
         item={item}
         expanded={expanded}
+        colors={colors}
+        styles={styles}
         onPreviewFile={onPreviewFile}
         onToggleDirectory={onToggleDirectory}
       />
@@ -76,10 +83,12 @@ function isTreeNode(item: FileExplorerRow): item is TreeNode {
 function TreeRow(props: {
   item: TreeNode
   expanded: ReadonlySet<string>
+  colors: MobileThemeColors
+  styles: ReturnType<typeof createMobileFileExplorerStyles>
   onPreviewFile: (relativePath: string, displayName: string) => void
   onToggleDirectory: (relativePath: string) => void
 }) {
-  const { item, expanded, onPreviewFile, onToggleDirectory } = props
+  const { item, expanded, colors, styles, onPreviewFile, onToggleDirectory } = props
   const isDirectory = item.kind === 'directory'
   const isExpanded = expanded.has(item.relativePath)
   // Images render in the mobile viewer (via files.readPreview), so a binary

@@ -9,7 +9,7 @@ import {
 } from './terminal-webview-engine-error-state'
 import { TERMINAL_WEBVIEW_FRAME_STYLES } from './terminal-webview-frame-styles'
 import { useTerminalWebReadyWatchdog } from './terminal-webview-ready-watchdog'
-import { XTERM_WEBVIEW_SOURCE } from './terminal-webview-html'
+import { WTERM_WEBVIEW_SOURCE } from './terminal-webview-html'
 import type { TerminalWebViewCommand } from './terminal-webview-messages'
 import { createTerminalWebViewPendingMessages } from './terminal-webview-pending-messages'
 import { routeTerminalQueryReply } from './terminal-webview-query-reply-routing'
@@ -20,7 +20,6 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   {
     style,
     terminalTheme,
-    disableWebgl = false,
     textScale = 1,
     onWebReady,
     onEngineError,
@@ -44,8 +43,6 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   const pendingMessages = useMemo(() => createTerminalWebViewPendingMessages(), [])
   const messageIdRef = useRef(0)
   const pendingPingIdRef = useRef<number | null>(null)
-  const disableWebglRef = useRef(disableWebgl)
-  disableWebglRef.current = disableWebgl
   const measureResolveRef = useRef<
     ((result: { cols: number; rows: number } | null) => void) | null
   >(null)
@@ -319,8 +316,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
           oscLinks,
           terminalTheme,
           fontScale: textScale,
-          preserveScroll,
-          disableWebgl: disableWebglRef.current
+          preserveScroll
         })
       },
       resize(cols: number, rows: number) {
@@ -353,7 +349,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
           }
           measureResolveRef.current = finish
           sendToWebView({ type: 'measure', containerHeight })
-          // Why: if the WebView doesn't respond within 2s (e.g., xterm
+          // Why: if the WebView doesn't respond within 2s (e.g., wterm
           // failed to load), resolve null so the caller can disable
           // Fit to Phone rather than hanging indefinitely.
           timeout = setTimeout(() => {
@@ -403,17 +399,17 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
     <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, style]}>
       <WebView
         ref={webViewRef}
-        source={XTERM_WEBVIEW_SOURCE}
+        source={WTERM_WEBVIEW_SOURCE}
         style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
         originWhitelist={['*']}
         javaScriptEnabled
         scrollEnabled={false}
         // Why: Android parent gesture containers can intercept vertical drags
-        // before the injected xterm scroll router sees them.
+        // before the injected terminal scroll router sees them.
         nestedScrollEnabled
         scalesPageToFit={false}
         // Why: Android WebView defaults textZoom to the system font scale, inflating
-        // xterm's DOM glyphs past its canvas-measured cell grid (#4579). iOS ignores it.
+        // terminal glyphs past the renderer's measured cell grid. iOS ignores it.
         textZoom={100}
         onLoadStart={handleLoadStart}
         onMessage={handleMessage}

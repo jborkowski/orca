@@ -8,6 +8,19 @@ import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
 // 300-line cap.
 export function createPrActionsStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
   return StyleSheet.create({
+    // Identity and actions share one section, so this wrapper only sets rhythm.
+    actionsBlock: {
+      gap: spacing.sm
+    },
+    // Keep lower-emphasis actions on one row in the narrow sidebar.
+    secondaryRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: spacing.sm
+    },
+    secondaryButton: {
+      flex: 1
+    },
     // Primary CTA (merge) and secondary action buttons (close/reopen/rerun/add).
     actionButton: {
       ...chrome.outlineButton,

@@ -144,26 +144,15 @@ async function doLoadHosts(): Promise<HostProfile[]> {
       token = fetched
       tokenCache.set(stored.id, token)
     }
-    out.push({ ...normalizeStoredHost(stored.data), deviceToken: token })
+    out.push({ ...normalizeStoredHost(stored), deviceToken: token })
   }
   return out
 }
 
 async function loadStoredHosts(): Promise<StoredHostProfile[]> {
   try {
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-    return parsed.flatMap((item) => {
-      // Why: same drop-old-records rule as loadHosts; keeps internal
-      // mutators from re-persisting pre-v0.0.3 entries.
-      if (item && typeof item === 'object' && 'deviceToken' in item) {
-        return []
-      }
-      const result = StoredHostProfileSchema.safeParse(item)
-      return result.success ? [normalizeStoredHost(result.data)] : []
-    })
+    const storedHosts = parseStoredHosts(await AsyncStorage.getItem(STORAGE_KEY))
+    return storedHosts?.map(normalizeStoredHost) ?? []
   } catch {
     return []
   }

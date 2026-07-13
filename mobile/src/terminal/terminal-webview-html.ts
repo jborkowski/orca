@@ -1,16 +1,17 @@
-// xterm.js WebView document + default Tokyonight theme. Extracted from
+// wterm/Ghostty WebView document + default Tokyonight theme. Extracted from
 // TerminalWebView.tsx to keep that file within the max-lines budget.
 import type { RuntimeMobileTerminalTheme } from '../../../src/shared/runtime-types'
 import { colors } from '../theme/mobile-theme'
 import { TERMINAL_TEXT_SCALES } from '../storage/preferences'
 import { TERMINAL_PATH_TAP_JS } from './terminal-path-tap-injected'
-import { XTERM_ENGINE_CSS, XTERM_ENGINE_JS } from './terminal-webview-engine.generated'
+import { WTERM_ENGINE_CSS, WTERM_ENGINE_JS } from './terminal-webview-engine.generated'
 import { TERMINAL_REFLOW_JS } from './terminal-webview-reflow-injected'
+import { TERMINAL_SELECTION_RANGES_JS } from './terminal-webview-selection-ranges-injected'
 import { TERMINAL_TAP_DISPATCH_JS } from './terminal-webview-tap-dispatch-injected'
 import { TERMINAL_WEBVIEW_THEME_JS } from './terminal-webview-theme-injected'
 import { TERMINAL_QUERY_REPLY_JS } from './terminal-webview-query-reply-injected'
 import { URL_TAP_WEBVIEW_JS } from './terminal-webview-url-tap'
-import { TERMINAL_WEBGL_RECOVERY_JS } from './terminal-webview-webgl-recovery-injected'
+import { TERMINAL_WTERM_ADAPTER_JS } from './terminal-webview-wterm-adapter-injected'
 
 const DEFAULT_TERMINAL_THEME: RuntimeMobileTerminalTheme['theme'] = {
   background: colors.terminalBg,
@@ -39,14 +40,14 @@ const DEFAULT_TERMINAL_THEME: RuntimeMobileTerminalTheme['theme'] = {
 
 // Why: TUI apps (Claude Code / Ink) emit escape codes with absolute cursor
 // positioning designed for the desktop's terminal dimensions (~150+ cols).
-// We initialize xterm at the desktop's exact cols/rows so those escape codes
+// We initialize wterm at the desktop's exact cols/rows so those escape codes
 // render correctly, then use a measured CSS transform: scale() to fit the
-// canvas into the phone viewport. The scale is computed after xterm opens
+// DOM grid into the phone viewport. The scale is computed after wterm opens
 // by measuring the rendered surface width, not hardcoded, so it adapts to
 // any terminal column count (80, 150, 200+). All touch gestures (scroll,
 // pinch-to-zoom, pan) are handled by custom JS rather than native WebView
 // behavior, so they work correctly with the CSS scale transform.
-export const XTERM_HTML = `<!DOCTYPE html>
+export const WTERM_HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -59,7 +60,7 @@ window.onerror = function(msg) {
   if (window.__engineErrors.length < 20) window.__engineErrors.push(String(msg));
 };
 </script>
-<style>${XTERM_ENGINE_CSS}</style>
+<style>${WTERM_ENGINE_CSS}</style>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -78,25 +79,22 @@ window.onerror = function(msg) {
     transform-origin: top left;
     display: inline-block;
   }
-  .xterm { -webkit-user-select: none; user-select: none; font-variant-emoji: text; }
-  .xterm .xterm-viewport {
-    overflow-y: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none;
+  .wterm {
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden !important;
+    -webkit-user-select: text;
+    user-select: text;
+    font-variant-emoji: text;
   }
-  .xterm .xterm-viewport::-webkit-scrollbar {
+  .wterm::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
     background: transparent !important;
   }
-  .xterm .xterm-scrollable-element > .xterm-scrollbar,
-  .xterm .xterm-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
+  .wterm ::selection { background: var(--orca-selection-bg); }
   #scroll-indicator {
     position: fixed;
     top: 4px;
@@ -130,6 +128,11 @@ window.onerror = function(msg) {
     display: none;
   }
   #selection-overlay.active { display: block; }
+  .sel-range {
+    position: absolute;
+    background: var(--orca-selection-bg);
+    opacity: 0.72;
+  }
   .sel-handle {
     position: absolute;
     width: 44px; height: 44px;
@@ -197,6 +200,7 @@ window.onerror = function(msg) {
 </div>
 <div id="scroll-indicator"><div id="scroll-thumb"></div></div>
 <div id="selection-overlay">
+  <div id="selection-ranges"></div>
   <div id="sel-handle-start" class="sel-handle start"></div>
   <div id="sel-handle-end" class="sel-handle end"></div>
   <div id="sel-menu">
@@ -204,7 +208,8 @@ window.onerror = function(msg) {
     <button id="sel-menu-all">Select All</button>
   </div>
 </div>
-<script>${XTERM_ENGINE_JS}</script>
+<script>${WTERM_ENGINE_JS}</script>
+<script>${TERMINAL_WTERM_ADAPTER_JS}</script>
 <script>
 (function() {
   var surface = document.getElementById('terminal-surface');
@@ -233,7 +238,7 @@ window.onerror = function(msg) {
   var currentScale = 1;
   // Why: userScale is transient pinch zoom (CSS) for smooth feedback DURING a
   // gesture only; it resets to 1 on release. The persistent "text size" is the
-  // real xterm fontSize (currentTextScale × BASE_FONT_PX), so changing it
+  // real renderer fontSize (currentTextScale × BASE_FONT_PX), so changing it
   // reflows the grid: a bigger cell means fewer columns fit, and RN re-measures
   // and resizes the PTY (terminal.updateViewport) so the shell rewraps to the
   // new width. A finished pinch snaps to the nearest preset and reports it to RN.
@@ -297,8 +302,6 @@ window.onerror = function(msg) {
   var defaultTheme = ${JSON.stringify(DEFAULT_TERMINAL_THEME)};
   var terminalThemeInput = null;
   var terminalTheme = defaultTheme;
-  var webglAddon = null;
-  var webglRecoveryTimer = null;
   var activeAltScreenSnapshot = false;
   var trackedMouseTrackingMode = 'none';
   var sgrMouseMode = false;
@@ -335,7 +338,7 @@ window.onerror = function(msg) {
   }
 
   // Why: width measurement strategy.
-  //   1. Prefer cellWidth × term.cols — this is what xterm's renderer uses
+  //   1. Prefer cellWidth × term.cols — this is what the renderer uses
   //      to lay out and is independent of buffer content. It's the "logical
   //      width" of the terminal grid.
   //   2. Fall back to term.element.scrollWidth — the actual rendered DOM
@@ -421,20 +424,20 @@ ${TERMINAL_WEBVIEW_THEME_JS}
 
   // Why: intentional no-op. Mobile replays a live PTY snapshot then applies
   // live cursor-relative chunks from that same PTY; resizing only the WebView
-  // xterm changes cursor coordinates and makes TUI repaint chunks duplicate or
+  // the terminal changes cursor coordinates and makes TUI repaint chunks duplicate or
   // overlap. Kept as a no-op so its call sites stay legible.
   function adjustRowsForViewport() {}
 
-  // Why: cold-start fit. After init() opens xterm, the renderer needs
+  // Why: cold-start fit. After init() opens wterm, the renderer needs
   // several frames before cell dimensions are computed. Reading too early
   // gives cellWidth=0 (renderer service not ready) or scrollWidth=0 (DOM
   // not laid out), and computeFitScale returns 1 → no zoom.
   //
   // Gate: cellWidth × cols is the canonical "logical width" of the grid
-  // and reflects xterm's layout decision, independent of buffer content.
+  // and reflects the renderer's layout decision, independent of buffer content.
   // We commit when cellWidth becomes positive (renderer ready). Fallback:
   // if cellWidth never becomes available, gate on stable positive
-  // scrollWidth (xterm rendered something). Cap at 60 frames (~1s @60Hz)
+  // scrollWidth (the terminal rendered something). Cap at 60 frames (~1s @60Hz)
   // so a backgrounded WebView never spins forever.
   var FIT_RETRY_MAX_FRAMES = 60;
   var fitRetryToken = 0;
@@ -478,7 +481,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     if (!term || !term.element) return;
     var preSnapScale = computeFitScale();
     currentScale = preSnapScale;
-    // Why: when scale is very close to 1 (e.g. 0.97 from xterm scrollbar
+    // Why: when scale is very close to 1 (e.g. 0.97 from renderer measurement
     // sub-pixels) snap to 1 to avoid imperceptible shrinkage that prevents
     // a second applyFitScale from observing a "no-op needed" state.
     if (currentScale >= 0.95) currentScale = 1;
@@ -524,7 +527,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     var on = data.lastIndexOf(ESC + '[?1049h');
     // Why: SerializeAddon can include normal-buffer scrollback before the
     // active alternate-screen snapshot. Replaying both into a fresh mobile
-    // xterm duplicates TUI frames and can flatten SGR attributes.
+    // the terminal duplicates TUI frames and can flatten SGR attributes.
     return on > 0 ? data.slice(on) : data;
   }
 
@@ -611,7 +614,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     }
     var next = writeQueue[writeQueueHead];
     writeQueueHead++;
-    // Why: high-throughput terminals can enqueue faster than xterm parses;
+    // Why: high-throughput terminals can enqueue faster than Ghostty parses;
     // compact consumed slots so drain work stays O(1) without retaining old chunks.
     if (writeQueueHead > 128 && writeQueueHead * 2 > writeQueue.length) {
       writeQueue = writeQueue.slice(writeQueueHead);
@@ -656,7 +659,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       return;
     }
     writesDraining = true;
-    // Why: xterm.write() parses asynchronously. Row adjustment/resizing must
+    // Why: term.write() parses asynchronously. Row adjustment/resizing must
     // wait until replayed SGR attributes have landed in the buffer.
     term.write(next, function() {
       if (gen !== terminalGeneration) return;
@@ -670,7 +673,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     pumpWrites(terminalGeneration);
   }
 
-  function init(cols, rows, initialData, nextTheme, nextFontScale, preserveScroll, nextOscLinks, disableWebgl) {
+  async function init(cols, rows, initialData, nextTheme, nextFontScale, preserveScroll, nextOscLinks) {
     if (typeof nextFontScale === 'number' && nextFontScale > 0) currentTextScale = nextFontScale;
     // Why: a width-reflow re-stream rewraps the same content at new cols.
     // Distance-from-bottom (rows) is the only stable anchor across reflow,
@@ -682,8 +685,6 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     // Why: snapshot replay can contain old queries whose replies must never
     // re-enter the live PTY. Each replacement terminal earns authority anew.
     resetTerminalDataReplyAuthority();
-    cancelWebglContextRecovery();
-    webglAddon = null;
     ready = false;
     resetWriteQueue();
     statusDotPendingSelector = false;
@@ -705,7 +706,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     };
     var replayData = normalizeInitialData(initialData);
     // Why: normalizeInitialData can discard pre-alt-screen bytes. Keep the
-    // mirrored modes aligned with exactly what this mobile xterm replays.
+    // mirrored modes aligned with exactly what this mobile terminal replays.
     updateMouseModeFromData(replayData);
     activeAltScreenSnapshot = isAltScreenActive(replayData);
     initialOscLinks = Array.isArray(nextOscLinks) ? nextOscLinks : [];
@@ -738,8 +739,8 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       fontWeight: '300',
       fontWeightBold: '500',
       scrollback: 5000,
-      // Why: xterm suppresses parser-generated query replies when disableStdin
-      // is true. Native accepts only validated reply grammars from onData.
+      // Why: native accepts only validated parser replies from the hidden input
+      // bridge; normal keyboard input is owned by React Native.
       disableStdin: false,
       cursorBlink: false,
       cursorStyle: 'bar',
@@ -747,14 +748,13 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       convertEol: false,
       allowProposedApi: true
     });
-    term.open(surface);
-    if (!disableWebgl && window.WebglAddon && window.WebglAddon.WebglAddon) {
-      try { var webglAddon = new window.WebglAddon.WebglAddon(); term.loadAddon(webglAddon); if (webglAddon.onContextLoss) webglAddon.onContextLoss(function() { try { webglAddon && webglAddon.dispose && webglAddon.dispose(); } catch (e) {} }); } catch (e) {}
-    }
-    if (window.Unicode11Addon && window.Unicode11Addon.Unicode11Addon) try { term.loadAddon(new window.Unicode11Addon.Unicode11Addon()); term.unicode.activeVersion = '11'; } catch (e) {}
     if (typeof replayData === 'string' && replayData.length > 0) {
+      // Why: live chunks may arrive while Ghostty's WASM is loading; queue the
+      // snapshot first so the later chunks retain their PTY order.
       enqueueWrite(replayData);
     }
+    await term.open(surface);
+    if (gen !== terminalGeneration) { term.dispose(); return; }
 
     // Why: reset eviction tracking + attach observers for the new term.
     resetEvictionCounter();
@@ -918,9 +918,9 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       return;
     }
     // Why: the rows we report become the PTY's actual row count after the
-    // server fits to viewport, and xterm renders exactly that many lines
+    // server fits to viewport, and wterm renders exactly that many lines
     // anchored top-left of the WebView. Subtracting rows here would leave
-    // dead xterm-background space at the bottom of the container and make
+    // dead terminal-background space at the bottom of the container and make
     // the last PTY rows visually appear above an "invisible line." Any
     // safety margin between the prompt and the accessory bar must come
     // from RN layout (terminalFrame's flex bounds), not from undersizing
@@ -935,8 +935,12 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       handledMessageIds.push(msg.id);
       if (handledMessageIds.length > 256) handledMessageIds.shift();
     }
-    if (msg.type === 'init') {
-      init(msg.cols, msg.rows, msg.initialData, msg.terminalTheme, msg.fontScale, msg.preserveScroll, msg.oscLinks, msg.disableWebgl);
+    // Why: native probes document readiness before sending stateful messages.
+    if (msg.type === 'ping') notify({ type: 'pong', pingId: msg.id });
+    else if (msg.type === 'init') {
+      init(msg.cols, msg.rows, msg.initialData, msg.terminalTheme, msg.fontScale, msg.preserveScroll, msg.oscLinks).catch(function(error) {
+        reportEngineError('terminal init failed', error, !everReady);
+      });
     } else if (msg.type === 'set-font-scale') {
       // Why: ignore RN echoing back the value a pinch just set (msg.fontScale ===
       // currentTextScale) so the post-pinch state isn't reset; only apply changes.
@@ -1017,6 +1021,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
   var EDGE_SCROLL_INTERVAL = 60;
 
   var selectionOverlay = document.getElementById('selection-overlay');
+  var selectionRanges = document.getElementById('selection-ranges');
   var handleStart = document.getElementById('sel-handle-start');
   var handleEnd = document.getElementById('sel-handle-end');
   var selMenu = document.getElementById('sel-menu');
@@ -1039,7 +1044,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
   var edgeScrollClientY = 0;
 
   // Eviction watchdog: linesEverWritten counts onLineFeed since last init.
-  // Once buffer is full, every onLineFeed evicts the top row in xterm and
+  // Once the buffer is full, every onLineFeed evicts the top row and
   // we mirror that by decrementing stored absolute rows.
   var linesEverWritten = 0;
 
@@ -1469,7 +1474,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     var line = getLineText(absRow);
     if (!line) {
       sel = { anchor: { col: col, row: absRow }, focus: { col: col, row: absRow }, activeHandle: null };
-      applyXtermSelection();
+      applyTerminalSelection();
       return;
     }
     var s = col;
@@ -1483,7 +1488,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
       focus: { col: e, row: absRow },
       activeHandle: null
     };
-    applyXtermSelection();
+    applyTerminalSelection();
   }
 
   function isStartFirst(a, b) {
@@ -1497,14 +1502,14 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     return { start: sel.focus, end: sel.anchor };
   }
 
-  function applyXtermSelection() {
+  function applyTerminalSelection() {
     if (!term || !sel) return;
     var r = selRange();
     if (!r) return;
     // Why: term.select(col, row, length) takes a buffer-absolute row,
     // not a viewport-relative one. Subtracting viewportY here drifts the
     // selection by the scrollback height — handles render where the user
-    // pressed (their math is independent), but xterm highlights an
+    // pressed (their math is independent), but the renderer highlights an
     // off-screen scrollback region and copies the wrong text.
     var length;
     if (r.start.row === r.end.row) {
@@ -1524,12 +1529,13 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     stopEdgeScroll();
     if (term) {
       try { term.clearSelection(); } catch (e) {}
-      // Why: some xterm renderers cache cells and skip repaint on
+      // Why: some renderers cache cells and skip repaint on
       // clearSelection alone, leaving the previously-highlighted cells
       // visually selected. Force a full refresh so the selection layer
       // actually clears on screen.
       try { term.refresh(0, term.rows - 1); } catch (e) {}
     }
+    clearSelectionRanges();
     selectionOverlay.classList.remove('active');
     notify({ type: 'set-select-mode', enabled: false });
   }
@@ -1543,62 +1549,16 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     repositionOverlay();
   }
 
-  function repositionOverlay() {
-    if (selMode !== 'select' || !sel || !term) return;
-    var r = selRange();
-    var sPx = cellToViewportPx(r.start.col, r.start.row);
-    var ePx = cellToViewportPx(r.end.col + 1, r.end.row);
-    var cellH = getCellHeight() * getTotalScale();
-    // Why: native iOS pattern — start handle anchors at the TOP of the
-    // first selected cell (dot above, stem covers the cell going down);
-    // end handle anchors at the BOTTOM of the last selected cell (dot
-    // below, stem covers the cell going up).
-    handleStart.style.left = sPx.x + 'px';
-    handleStart.style.top = sPx.y + 'px';
-    handleEnd.style.left = ePx.x + 'px';
-    handleEnd.style.top = (ePx.y + cellH) + 'px';
-    var startVisible = sPx.y >= 0 && sPx.y <= window.innerHeight;
-    var endVisible = ePx.y >= 0 && ePx.y <= window.innerHeight;
-    handleStart.style.visibility = startVisible ? 'visible' : 'hidden';
-    handleEnd.style.visibility = endVisible ? 'visible' : 'hidden';
-    var menuCenterX, menuY, vTransform, marginTop;
-    if (startVisible && sPx.y > 56) {
-      menuCenterX = sPx.x; menuY = sPx.y;
-      vTransform = 'translateY(-100%)';
-      marginTop = '-12px';
-    } else if (endVisible && ePx.y + cellH + 56 < window.innerHeight) {
-      menuCenterX = ePx.x; menuY = ePx.y + cellH;
-      vTransform = 'translateY(0)';
-      marginTop = '12px';
-    } else {
-      // selection covers full viewport — pin to visible center
-      menuCenterX = window.innerWidth / 2;
-      menuY = window.innerHeight / 2;
-      vTransform = 'translateY(-50%)';
-      marginTop = '0';
-    }
-    // Why: clamp horizontally so the pill stays fully visible when the
-    // selection sits near a screen edge. We position via plain left
-    // (no horizontal translate) so the clamp math is straightforward.
-    selMenu.style.transform = vTransform;
-    selMenu.style.marginTop = marginTop;
-    selMenu.style.top = menuY + 'px';
-    selMenu.style.left = '0px';
-    var EDGE_MARGIN = 8;
-    var menuW = selMenu.offsetWidth || 0;
-    var minLeft = EDGE_MARGIN;
-    var maxLeft = Math.max(EDGE_MARGIN, window.innerWidth - menuW - EDGE_MARGIN);
-    var desiredLeft = menuCenterX - menuW / 2;
-    var clampedLeft = Math.max(minLeft, Math.min(maxLeft, desiredLeft));
-    selMenu.style.left = clampedLeft + 'px';
-  }
+  // Why: wterm exposes no programmatic selection API, so Orca paints the
+  // same cell range that its native-style handles and copy action operate on.
+  ${TERMINAL_SELECTION_RANGES_JS}
 
   function syncSelectionHandleToViewportPoint(handle, clientX, clientY) {
     var c = viewportToCell(clientX, clientY);
     if (!c || !sel) return false;
     if (handle === 'start') sel.anchor = c;
     else sel.focus = c;
-    applyXtermSelection();
+    applyTerminalSelection();
     return true;
   }
 
@@ -1897,10 +1857,10 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     updateTransform();
   });
 
-  if (window.Terminal) {
+  if (window.WTerm && window.GhosttyCore && window.Terminal) {
     notify({ type: 'web-ready' });
   } else {
-    reportEngineError('terminal engine missing', 'xterm failed to load', true);
+    reportEngineError('terminal engine missing', 'wterm or Ghostty failed to load', true);
   }
 })();
 </script>
@@ -1908,5 +1868,5 @@ ${TERMINAL_WEBVIEW_THEME_JS}
 </html>`
 
 // Why: WebView treats source identity as page identity on some platforms; keep
-// parent/session re-renders from reloading xterm and forcing fresh snapshots.
-export const XTERM_WEBVIEW_SOURCE = { html: XTERM_HTML }
+// parent/session re-renders from reloading wterm and forcing fresh snapshots.
+export const WTERM_WEBVIEW_SOURCE = { html: WTERM_HTML }

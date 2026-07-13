@@ -1,9 +1,9 @@
-// In-WebView reflow routine, injected into XTERM_HTML. Extracted from
+// In-WebView reflow routine, injected into WTERM_HTML. Extracted from
 // terminal-webview-html.ts to keep that file within its max-lines budget.
 // Closes over term / isAlternateBufferActive / applyFitScale /
 // updateScrollIndicator / initRows defined in the host IIFE.
 export const TERMINAL_REFLOW_JS = `
-  // Why: rewrap the local xterm buffer (scrollback included) to a new width
+  // Why: rewrap the local terminal buffer (scrollback included) to a new width
   // after a server PTY reflow. Skip the alternate screen: those snapshots are
   // fully repainted by the PTY and a local resize there can drop SGR attributes
   // (see init's alt-screen handling), which shows as white text.
