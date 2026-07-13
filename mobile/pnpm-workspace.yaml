@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+
+# Why: pnpm 10 ignores package.json overrides and frozen CI installs then reject
+# the lockfile whose override metadata no longer matches the active config.
+overrides:
+  xcode>uuid: 11.1.1

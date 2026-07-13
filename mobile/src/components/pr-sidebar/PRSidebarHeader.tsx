@@ -60,9 +60,7 @@ export function PRSidebarHeader({ pr, details, titleAction }: Props) {
         </Pressable>
         <PRTitle
           title={title}
-          number={pr.number}
           editable={editable}
-          openPr={openPr}
           titleAction={titleAction}
           styles={styles}
           composerStyles={composerStyles}
@@ -70,35 +68,17 @@ export function PRSidebarHeader({ pr, details, titleAction }: Props) {
         />
         {author ? <Text style={styles.prMeta}>by {author}</Text> : null}
         {baseRef && headRef ? (
-          // head -> base reads in merge direction (desktop ChecksPanel parity).
           <View style={styles.branchRow}>
-            <Text style={styles.branchPill}>{headRef}</Text>
+            <Text style={styles.branchPill} numberOfLines={1}>
+              {headRef}
+            </Text>
             <ArrowRight size={12} color={colors.textSecondary} strokeWidth={2.2} />
-            <Text style={styles.branchPill}>{baseRef}</Text>
+            <Text style={styles.branchPill} numberOfLines={1}>
+              {baseRef}
+            </Text>
           </View>
         ) : null}
       </View>
-      <PRTitle title={title} editable={editable} titleAction={titleAction} />
-      {baseRef && headRef ? (
-        <View style={styles.branchRow}>
-          <Text style={styles.branchPill} numberOfLines={1}>
-            {headRef}
-          </Text>
-          <ArrowRight size={12} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={styles.branchPill} numberOfLines={1}>
-            {baseRef}
-          </Text>
-        </View>
-      ) : null}
-    </>
-  )
-
-  if (bare) {
-    return <View style={styles.identityBlock}>{body}</View>
-  }
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionBody}>{body}</View>
     </View>
   )
 }
@@ -106,7 +86,6 @@ export function PRSidebarHeader({ pr, details, titleAction }: Props) {
 function PRTitle({
   title,
   editable,
-  openPr,
   titleAction,
   styles,
   composerStyles,

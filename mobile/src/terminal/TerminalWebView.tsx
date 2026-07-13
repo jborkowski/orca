@@ -16,18 +16,6 @@ import { routeTerminalQueryReply } from './terminal-webview-query-reply-routing'
 
 type Props = TerminalWebViewProps
 
-type Props = {
-  style?: StyleProp<ViewStyle>
-  terminalTheme?: MobileTerminalTheme
-  // Why: e-ink panels use the DOM renderer to avoid WebGL refresh artifacts.
-  disableWebgl?: boolean
-  // Why: baseline zoom multiplier ("text size") applied on top of the fit-to-width
-  // scale; raw xterm fontSize can't drive apparent size because the fit cancels it.
-  textScale?: number
-  onWebReady?: () => void
-  onEngineError?: (message: string) => void
-} & TerminalSelectionEvents
-
 export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function TerminalWebView(
   {
     style,
@@ -56,7 +44,6 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   const pendingMessages = useMemo(() => createTerminalWebViewPendingMessages(), [])
   const messageIdRef = useRef(0)
   const pendingPingIdRef = useRef<number | null>(null)
-  const terminalThemeKey = useMemo(() => JSON.stringify(terminalTheme ?? null), [terminalTheme])
   const disableWebglRef = useRef(disableWebgl)
   disableWebglRef.current = disableWebgl
   const measureResolveRef = useRef<
@@ -76,8 +63,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   )
 
   const sendToWebView = useCallback((msg: TerminalWebViewCommand) => {
-    messageIdRef.current += 1
-    const id = messageIdRef.current
+    const id = ++messageIdRef.current
     webViewRef.current?.postMessage(JSON.stringify({ ...msg, id }))
     return id
   }, [])
@@ -278,7 +264,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
 
   useEffect(() => {
     postMessage({ type: 'set-theme', terminalTheme })
-  }, [postMessage, terminalThemeKey, terminalTheme])
+  }, [postMessage, terminalTheme])
 
   // Why: live-apply text-size changes to an already-mounted terminal (the pane
   // stays alive while the user visits Settings), so no terminal reload is needed.

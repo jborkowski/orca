@@ -42,6 +42,8 @@ export type TerminalSelectionEvents = {
 export type TerminalWebViewProps = {
   style?: StyleProp<ViewStyle>
   terminalTheme?: MobileTerminalTheme
+  // Why: e-ink panels use the DOM renderer to avoid WebGL refresh artifacts.
+  disableWebgl?: boolean
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
   // xterm fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number

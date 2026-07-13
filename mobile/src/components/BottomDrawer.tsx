@@ -3,7 +3,6 @@ import {
   View,
   Pressable,
   StyleSheet,
-  Platform,
   useWindowDimensions,
   ScrollView,
   Keyboard,
@@ -26,6 +25,7 @@ import { spacing } from '../theme/mobile-theme'
 import { useMobileTheme } from '../theme/mobile-theme-context'
 import { resolveBottomDrawerMounted } from './bottom-drawer-mount-state'
 import { useResponsiveLayout } from '../layout/responsive-layout'
+import { bottomDrawerChromeStyles as drawerChromeStyles } from './bottom-drawer-chrome-styles'
 
 const DISMISS_THRESHOLD = 80
 const SPRING_CONFIG = { damping: 28, stiffness: 400 }
@@ -287,109 +287,34 @@ function MountedBottomDrawer({
   // runs before the parent unmounts us; show/hide is driven by `progress`, so
   // animationType stays "none". onRequestClose handles the Android back button.
   return (
-    <Animated.View
-      pointerEvents={visible ? 'auto' : 'none'}
-      style={[drawerChromeStyles.overlay, { zIndex, elevation: zIndex }]}
-      accessibilityViewIsModal
-      aria-modal
-    >
-      <GestureHandlerRootView style={drawerChromeStyles.root}>
-        <Animated.View style={[drawerChromeStyles.backdrop, backdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
-        </Animated.View>
-
-        <View
-          style={[drawerChromeStyles.anchor, isWideLayout && drawerChromeStyles.anchorWide]}
-          pointerEvents="box-none"
-        >
-          <Animated.View
-            style={[
-              drawerChromeStyles.drawer,
-              chrome.noShadow,
-              isEinkMode && {
-                borderTopWidth: 1,
-                borderLeftWidth: 1,
-                borderRightWidth: 1,
-                borderColor: colors.borderSubtle
-              },
-              {
-                backgroundColor: colors.bgBase,
-                width: '100%',
-                maxWidth: isWideLayout ? modalMaxWidth : undefined,
-                maxHeight: screenHeight - insets.top - spacing.lg,
-                paddingBottom: insets.bottom + spacing.lg
-              },
-              drawerStyle
-            ]}
-          >
-            {!contentScrollable ? (
-              <>
-                <GestureDetector gesture={handlePanGesture}>
-                  <Animated.View
-                    style={drawerChromeStyles.handleHitArea}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss drawer"
-                  >
-                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
-                  </Animated.View>
-                </GestureDetector>
-                <View style={drawerChromeStyles.staticContent}>{children}</View>
-              </>
-            ) : dragContentToDismiss ? (
-              <>
-                <GestureDetector gesture={handlePanGesture}>
-                  <Animated.View
-                    style={drawerChromeStyles.handleHitArea}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss drawer"
-                  >
-                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
-                  </Animated.View>
-                </GestureDetector>
-                <GestureDetector gesture={contentPanGesture}>
-                  <Animated.View collapsable={false}>
-                    <GestureDetector gesture={scrollGesture}>
-                      <Animated.ScrollView
-                        bounces={false}
-                        keyboardShouldPersistTaps="handled"
-                        onScroll={scrollHandler}
-                        scrollEventThrottle={16}
-                        showsVerticalScrollIndicator={false}
-                      >
-                        {children}
-                      </Animated.ScrollView>
-                    </GestureDetector>
-                  </Animated.View>
-                </GestureDetector>
-              </>
-            ) : (
-              <>
-                <GestureDetector gesture={handlePanGesture}>
-                  <Animated.View
-                    style={drawerChromeStyles.handleHitArea}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss drawer"
-                  >
-                    <View style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]} />
-                  </Animated.View>
-                </GestureDetector>
-                <ScrollView
-                  bounces={false}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  {children}
-                </ScrollView>
-              </>
-            )}
-            <View style={[drawerChromeStyles.bottomExtension, { backgroundColor: colors.bgBase }]} />
+    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={dismiss}>
+      <Animated.View
+        pointerEvents={visible ? 'auto' : 'none'}
+        style={[drawerChromeStyles.overlay, { zIndex, elevation: zIndex }]}
+        accessibilityViewIsModal
+        aria-modal
+      >
+        <GestureHandlerRootView style={drawerChromeStyles.root}>
+          <Animated.View style={[drawerChromeStyles.backdrop, backdropStyle]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
           </Animated.View>
 
-          <View style={[styles.anchor, isWideLayout && styles.anchorWide]} pointerEvents="box-none">
+          <View
+            style={[drawerChromeStyles.anchor, isWideLayout && drawerChromeStyles.anchorWide]}
+            pointerEvents="box-none"
+          >
             <Animated.View
               style={[
-                styles.drawer,
+                drawerChromeStyles.drawer,
+                chrome.noShadow,
+                isEinkMode && {
+                  borderTopWidth: 1,
+                  borderLeftWidth: 1,
+                  borderRightWidth: 1,
+                  borderColor: colors.borderSubtle
+                },
                 {
+                  backgroundColor: colors.bgBase,
                   width: '100%',
                   maxWidth: isWideLayout ? modalMaxWidth : undefined,
                   maxHeight: screenHeight - insets.top - spacing.lg,
@@ -402,24 +327,28 @@ function MountedBottomDrawer({
                 <>
                   <GestureDetector gesture={handlePanGesture}>
                     <Animated.View
-                      style={styles.handleHitArea}
+                      style={drawerChromeStyles.handleHitArea}
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss drawer"
                     >
-                      <View style={styles.handle} />
+                      <View
+                        style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]}
+                      />
                     </Animated.View>
                   </GestureDetector>
-                  <View style={styles.staticContent}>{children}</View>
+                  <View style={drawerChromeStyles.staticContent}>{children}</View>
                 </>
               ) : dragContentToDismiss ? (
                 <>
                   <GestureDetector gesture={handlePanGesture}>
                     <Animated.View
-                      style={styles.handleHitArea}
+                      style={drawerChromeStyles.handleHitArea}
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss drawer"
                     >
-                      <View style={styles.handle} />
+                      <View
+                        style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]}
+                      />
                     </Animated.View>
                   </GestureDetector>
                   <GestureDetector gesture={contentPanGesture}>
@@ -442,11 +371,13 @@ function MountedBottomDrawer({
                 <>
                   <GestureDetector gesture={handlePanGesture}>
                     <Animated.View
-                      style={styles.handleHitArea}
+                      style={drawerChromeStyles.handleHitArea}
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss drawer"
                     >
-                      <View style={styles.handle} />
+                      <View
+                        style={[drawerChromeStyles.handle, { backgroundColor: colors.textMuted }]}
+                      />
                     </Animated.View>
                   </GestureDetector>
                   <ScrollView
@@ -458,7 +389,9 @@ function MountedBottomDrawer({
                   </ScrollView>
                 </>
               )}
-              <View style={styles.bottomExtension} />
+              <View
+                style={[drawerChromeStyles.bottomExtension, { backgroundColor: colors.bgBase }]}
+              />
             </Animated.View>
           </View>
         </GestureHandlerRootView>
@@ -466,60 +399,3 @@ function MountedBottomDrawer({
     </Modal>
   )
 }
-
-const drawerChromeStyles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000
-  },
-  root: {
-    flex: 1
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)'
-  },
-  anchor: {
-    flex: 1,
-    justifyContent: 'flex-end'
-  },
-  anchorWide: {
-    alignItems: 'center'
-  },
-  drawer: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10
-      },
-      android: { elevation: 8 }
-    })
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.4
-  },
-  handleHitArea: {
-    alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md
-  },
-  staticContent: {
-    minHeight: 0
-  },
-  bottomExtension: {
-    position: 'absolute',
-    bottom: -500,
-    left: 0,
-    right: 0,
-    height: 500
-  }
-})
