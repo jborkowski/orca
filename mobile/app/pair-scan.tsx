@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -61,11 +61,26 @@ export default function PairScanScreen() {
   const [errorMessage, setErrorMessage] = useState('')
   const [pasteVisible, setPasteVisible] = useState(false)
   const [cameraBounds, setCameraBounds] = useState({ width: 0, height: 0 })
+  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null)
   const [logs, setLogs] = useState<ConnectionLogEntry[]>([])
   const logsRef = useRef<ConnectionLogEntry[]>([])
   const processingRef = useRef(false)
   const mountedRef = useRef(true)
   const activePairingAttemptRef = useRef<PairingConnectionAttempt | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    // Why: some Android devices advertise camera permission despite having no
+    // usable camera; mounting CameraView there crashes inside CameraX.
+    void CameraView.isAvailableAsync().then((available) => {
+      if (!cancelled) {
+        setCameraAvailable(available)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const setPairScanRootRef = useCallback((node: View | null): void => {
     if (node !== null) {
@@ -249,10 +264,41 @@ export default function PairScanScreen() {
     SCAN_RETICLE_MAX_SIZE
   )
 
-  if (!permission) {
+  if (!permission || cameraAvailable === null) {
     return (
       <View ref={setPairScanRootRef} style={[styles.container, containerPadding]}>
         <ActivityIndicator color={colors.textSecondary} />
+      </View>
+    )
+  }
+
+  if (!cameraAvailable) {
+    return (
+      <View ref={setPairScanRootRef} style={[styles.container, containerPadding]}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <ChevronLeft size={22} color={colors.textSecondary} />
+        </Pressable>
+        <View style={styles.centered}>
+          <Text style={styles.title}>Pair with desktop</Text>
+          <Text style={styles.subtitle}>
+            This device has no usable camera. Paste the pairing code from Orca Desktop instead.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.pasteButton, pressed && styles.pasteButtonPressed]}
+            onPress={() => setPasteVisible(true)}
+          >
+            <ClipboardIcon size={16} color={colors.textSecondary} />
+            <Text style={styles.pasteButtonText}>Paste pairing code</Text>
+          </Pressable>
+        </View>
+        <TextInputModal
+          visible={pasteVisible}
+          title="Paste pairing code"
+          message="Copy the code shown under the QR on your computer."
+          placeholder="orca://pair?code=... or paste the code"
+          onSubmit={handlePasteSubmit}
+          onCancel={() => setPasteVisible(false)}
+        />
       </View>
     )
   }
