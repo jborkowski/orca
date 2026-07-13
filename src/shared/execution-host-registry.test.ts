@@ -161,6 +161,7 @@ describe('execution host registry', () => {
               liveLeafCount: 0,
               remoteControl: {
                 state: 'reconnecting',
+                parked: false,
                 pendingRequestCount: 0,
                 subscriptionCount: 2,
                 reconnectAttempt: 1,

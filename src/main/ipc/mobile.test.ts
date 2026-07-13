@@ -83,6 +83,7 @@ describe('registerMobileHandlers', () => {
 
     expect(createPairingOffer).toHaveBeenCalledWith({
       address: '100.102.47.57',
+      addresses: ['100.102.47.57', '192.168.1.24'],
       rotate: undefined,
       name: expect.stringMatching(/^Mobile /),
       scope: 'mobile'
@@ -159,6 +160,7 @@ describe('registerMobileHandlers', () => {
 
     expect(createPairingOffer).toHaveBeenCalledWith({
       address: '100.64.1.20',
+      addresses: ['100.64.1.20'],
       rotate: true,
       name: expect.stringMatching(/^Runtime /),
       scope: 'runtime'

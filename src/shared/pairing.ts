@@ -6,6 +6,9 @@ const PairingScopeSchema = z.enum(['mobile', 'runtime'])
 export const PairingOfferSchema = z.object({
   v: z.literal(PAIRING_OFFER_VERSION),
   endpoint: z.string().min(1),
+  // Why: v2 clients can recover across interfaces while older clients keep
+  // using the required preferred endpoint.
+  endpoints: z.array(z.string().min(1)).optional(),
   deviceToken: z.string().min(1),
   // Why: the desktop's Curve25519 public key, base64-encoded. The mobile client
   // uses this to derive a shared secret via ECDH for end-to-end encryption.

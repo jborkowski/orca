@@ -1,8 +1,7 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   Linking,
@@ -18,9 +17,11 @@ import {
   type PairingConnectionAttempt
 } from '../src/transport/pairing-connection-attempt'
 import { connect } from '../src/transport/rpc-client'
-import { saveHost, getNextHostName } from '../src/transport/host-store'
+import { savePairedHost } from '../src/transport/save-paired-host'
 import type { ConnectionLogEntry, PairingOffer, RpcResponse } from '../src/transport/types'
-import { colors, spacing, radii, typography } from '../src/theme/mobile-theme'
+import { spacing } from '../src/theme/mobile-theme'
+import { useMobileTheme } from '../src/theme/mobile-theme-context'
+import { createPairScanStyles } from './pair-scan-styles'
 import { TextInputModal } from '../src/components/TextInputModal'
 import { ConnectionLog } from '../src/components/ConnectionLog'
 
@@ -31,7 +32,15 @@ const PAIRING_OVERALL_TIMEOUT_MS = 25_000
 const SCAN_RETICLE_SCALE = 0.62
 const SCAN_RETICLE_MAX_SIZE = 360
 
-function Step({ number, text }: { number: number; text: string }) {
+function Step({
+  number,
+  text,
+  styles
+}: {
+  number: number
+  text: string
+  styles: ReturnType<typeof createPairScanStyles>
+}) {
   return (
     <View style={styles.step}>
       <View style={styles.stepBadge}>
@@ -45,6 +54,8 @@ function Step({ number, text }: { number: number; text: string }) {
 export default function PairScanScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createPairScanStyles(colors, chrome), [colors, chrome])
   const [permission, requestPermission] = useCameraPermissions()
   const [status, setStatus] = useState<'scanning' | 'connecting' | 'error'>('scanning')
   const [errorMessage, setErrorMessage] = useState('')
@@ -124,6 +135,7 @@ export default function PairScanScreen() {
     logsRef.current = []
     setLogs([])
     let client: ReturnType<typeof connect> | null = null
+    let authenticatedEndpoint = offer.endpoint
     activePairingAttemptRef.current?.dispose()
 
     // Why: split the try/catch around the network call vs the local save
@@ -138,6 +150,10 @@ export default function PairScanScreen() {
     activePairingAttemptRef.current = attempt
     try {
       client = connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64, {
+        endpoints: offer.endpoints,
+        onAuthenticatedEndpoint: (endpoint) => {
+          authenticatedEndpoint = endpoint
+        },
         onLog: (entry) => {
           if (!mountedRef.current || activePairingAttemptRef.current !== attempt) {
             return
@@ -193,16 +209,7 @@ export default function PairScanScreen() {
     }
 
     try {
-      const hostId = `host-${Date.now()}`
-      const hostName = await getNextHostName()
-      await saveHost({
-        id: hostId,
-        name: hostName,
-        endpoint: offer.endpoint,
-        deviceToken: offer.deviceToken,
-        publicKeyB64: offer.publicKeyB64,
-        lastConnected: Date.now()
-      })
+      const hostId = await savePairedHost(offer, authenticatedEndpoint)
       if (!mountedRef.current) {
         return
       }
@@ -302,9 +309,9 @@ export default function PairScanScreen() {
       </Pressable>
 
       <View style={styles.steps}>
-        <Step number={1} text="Open Orca on your computer" />
-        <Step number={2} text="Go to Settings → Mobile" />
-        <Step number={3} text="Scan the QR code" />
+        <Step number={1} text="Open Orca on your computer" styles={styles} />
+        <Step number={2} text="Go to Settings → Mobile" styles={styles} />
+        <Step number={3} text="Scan the QR code" styles={styles} />
       </View>
 
       {status === 'scanning' && (
@@ -392,186 +399,3 @@ export default function PairScanScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase,
-    padding: spacing.lg
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm
-  },
-  steps: {
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-    marginLeft: 7
-  },
-  step: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm
-  },
-  stepBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.bgRaised,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  stepNumber: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary
-  },
-  stepText: {
-    fontSize: typography.bodySize,
-    color: colors.textSecondary
-  },
-  cameraWrap: {
-    flex: 1,
-    borderRadius: radii.camera,
-    overflow: 'hidden'
-  },
-  // Why: holds the layout slot while the camera is unmounted during
-  // paste, so the bottom action button doesn't snap up to fill the
-  // empty space.
-  cameraPlaceholder: {
-    flex: 1,
-    backgroundColor: colors.bgPanel,
-    borderRadius: radii.camera
-  },
-  camera: {
-    ...StyleSheet.absoluteFillObject
-  },
-  reticle: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  reticleFrame: {
-    position: 'relative'
-  },
-  corner: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: 'rgba(255,255,255,0.7)'
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 2.5,
-    borderLeftWidth: 2.5,
-    borderTopLeftRadius: 6
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 2.5,
-    borderRightWidth: 2.5,
-    borderTopRightRadius: 6
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 2.5,
-    borderLeftWidth: 2.5,
-    borderBottomLeftRadius: 6
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 2.5,
-    borderRightWidth: 2.5,
-    borderBottomRightRadius: 6
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  title: {
-    fontSize: typography.titleSize,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm
-  },
-  subtitle: {
-    maxWidth: 310,
-    fontSize: typography.bodySize,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 20
-  },
-  connectingText: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySize,
-    marginTop: spacing.lg
-  },
-  logSlot: {
-    width: '100%',
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.sm
-  },
-  errorText: {
-    color: colors.statusRed,
-    fontSize: typography.bodySize,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 20
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.textPrimary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.button
-  },
-  primaryButtonText: {
-    color: colors.bgBase,
-    fontSize: typography.bodySize,
-    fontWeight: '600'
-  },
-  pasteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.button
-  },
-  pasteButtonPressed: {
-    opacity: 0.6
-  },
-  pasteButtonText: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySize,
-    fontWeight: '500'
-  },
-  errorActions: {
-    alignItems: 'center',
-    gap: spacing.sm
-  },
-  secondaryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.button
-  },
-  secondaryButtonText: {
-    color: colors.textSecondary,
-    fontSize: typography.bodySize,
-    fontWeight: '500'
-  }
-})
