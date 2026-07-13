@@ -8,7 +8,6 @@ type NetworkListener = (state: NetworkSnapshot) => void
 let appStateListener: AppStateListener | null = null
 let networkListener: NetworkListener | null = null
 let seededNetworkState: NetworkSnapshot = { isConnected: true, type: 'WIFI' }
-let ipAddress = '192.168.1.10'
 const appStateRemove = vi.fn()
 const networkRemove = vi.fn()
 
@@ -23,7 +22,6 @@ vi.mock('react-native', () => ({
 
 vi.mock('expo-network', () => ({
   getNetworkStateAsync: () => Promise.resolve(seededNetworkState),
-  getIpAddressAsync: () => Promise.resolve(ipAddress),
   addNetworkStateListener: (listener: NetworkListener) => {
     networkListener = listener
     return { remove: networkRemove }
@@ -35,14 +33,7 @@ vi.mock('expo-network', () => ({
 async function subscribeAndSeed(nudge: () => void): Promise<() => void> {
   const unsubscribe = subscribeConnectionRevivalTriggers(nudge)
   await Promise.resolve()
-  await Promise.resolve()
   return unsubscribe
-}
-
-async function emitNetwork(state: NetworkSnapshot): Promise<void> {
-  networkListener?.(state)
-  await Promise.resolve()
-  await Promise.resolve()
 }
 
 describe('subscribeConnectionRevivalTriggers', () => {
@@ -53,7 +44,6 @@ describe('subscribeConnectionRevivalTriggers', () => {
     appStateListener = null
     networkListener = null
     seededNetworkState = { isConnected: true, type: 'WIFI' }
-    ipAddress = '192.168.1.10'
     nudge = vi.fn()
   })
 
@@ -67,37 +57,30 @@ describe('subscribeConnectionRevivalTriggers', () => {
 
   it('nudges when the network comes back online', async () => {
     await subscribeAndSeed(nudge)
-    await emitNetwork({ isConnected: false, type: 'NONE' })
+    networkListener?.({ isConnected: false, type: 'NONE' })
     expect(nudge).not.toHaveBeenCalled()
-    await emitNetwork({ isConnected: true, type: 'WIFI' })
+    networkListener?.({ isConnected: true, type: 'WIFI' })
     expect(nudge).toHaveBeenCalledTimes(1)
   })
 
   it('nudges when the app started offline and the first event is the recovery', async () => {
     seededNetworkState = { isConnected: false, type: 'NONE' }
     await subscribeAndSeed(nudge)
-    await emitNetwork({ isConnected: true, type: 'WIFI' })
+    networkListener?.({ isConnected: true, type: 'WIFI' })
     expect(nudge).toHaveBeenCalledTimes(1)
   })
 
   it('nudges on a Wi-Fi to cellular handoff that never reports offline', async () => {
     await subscribeAndSeed(nudge)
-    await emitNetwork({ isConnected: true, type: 'CELLULAR' })
+    networkListener?.({ isConnected: true, type: 'CELLULAR' })
     expect(nudge).toHaveBeenCalledTimes(1)
   })
 
   it('stays quiet when the network state matches the seeded baseline', async () => {
     await subscribeAndSeed(nudge)
-    await emitNetwork({ isConnected: true, type: 'WIFI' })
-    await emitNetwork({ isConnected: true, type: 'WIFI' })
+    networkListener?.({ isConnected: true, type: 'WIFI' })
+    networkListener?.({ isConnected: true, type: 'WIFI' })
     expect(nudge).not.toHaveBeenCalled()
-  })
-
-  it('nudges when Wi-Fi keeps the same type but receives a new IP address', async () => {
-    await subscribeAndSeed(nudge)
-    ipAddress = '192.168.1.11'
-    await emitNetwork({ isConnected: true, type: 'WIFI' })
-    expect(nudge).toHaveBeenCalledTimes(1)
   })
 
   it('ignores a stale seed that resolves after unsubscribe', async () => {

@@ -13,6 +13,7 @@ import {
 import { encodePairingOffer, parsePairingCode, type PairingOffer } from './pairing'
 import { RemoteRuntimeSharedControlConnection } from './remote-runtime-shared-control-connection'
 import * as sharedControlProtocol from './remote-runtime-shared-control-protocol'
+import { isRuntimeSubscriptionReplayResponse } from './runtime-subscription-replay'
 
 const TEST_PROJECT_PATH = path.join('tmp', 'project')
 
@@ -190,24 +191,17 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     connection.close()
   })
 
-  it('parks after retry exhaustion, retains subscriptions, and replays once on revival', async () => {
+  it('emits one final close when reconnect attempts are exhausted', async () => {
     const server = await createServer()
     const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
     const onClose = vi.fn()
 
     const unsafe = connection as unknown as {
-      recovery: {
-        reconnectAttempt: number
-        schedule: (args: {
-          intentionallyClosed: boolean
-          subscriptionCount: number
-          open: () => void
-        }) => void
-      }
+      reconnectAttempt: number
       subscriptions: Map<string, unknown>
-      open: () => void
+      scheduleReconnect: () => void
     }
-    unsafe.recovery.reconnectAttempt = 7
+    unsafe.reconnectAttempt = 7
     unsafe.subscriptions.set('sub-1', {
       requestId: 'sub-1',
       method: 'runtime.clientEvents.subscribe',
@@ -219,74 +213,15 @@ describe('RemoteRuntimeSharedControlConnection', () => {
       remoteSubscriptionId: null
     })
 
-    unsafe.recovery.schedule({
-      intentionallyClosed: false,
-      subscriptionCount: unsafe.subscriptions.size,
-      open: () => unsafe.open()
-    })
+    unsafe.scheduleReconnect()
 
-    expect(onClose).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
     expect(connection.getDiagnostics()).toMatchObject({
       state: 'closed',
-      parked: true,
       reconnectAttempt: 7,
-      subscriptionCount: 1
+      subscriptionCount: 0
     })
 
-    connection.notifyConnectionMayBeAvailable()
-    await vi.waitFor(() =>
-      expect(server.requests.map((request) => request.method)).toEqual([
-        'runtime.clientEvents.subscribe'
-      ])
-    )
-    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 1 })
-    expect(onClose).not.toHaveBeenCalled()
-
-    connection.close()
-  })
-
-  it('treats authentication rejection as terminal instead of parking', async () => {
-    const server = await createServer({ rejectAuthentication: true })
-    const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
-
-    await expect(connection.request('worktree.ps', undefined, 1000)).rejects.toMatchObject({
-      code: 'unauthorized'
-    })
-    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 0 })
-    connection.notifyConnectionMayBeAvailable()
-    expect(server.connectionCount()).toBe(1)
-    connection.close()
-  })
-
-  it('treats an invalid pairing key as terminal instead of parking subscriptions', async () => {
-    const connection = new RemoteRuntimeSharedControlConnection({
-      v: 2,
-      endpoint: 'ws://127.0.0.1:6768',
-      deviceToken: 'token',
-      publicKeyB64: 'invalid-key'
-    })
-    const onError = vi.fn()
-    const onClose = vi.fn()
-    const unsafe = connection as unknown as { subscriptions: Map<string, unknown> }
-    unsafe.subscriptions.set('sub-invalid-key', {
-      requestId: 'sub-invalid-key',
-      method: 'runtime.clientEvents.subscribe',
-      params: null,
-      callbacks: { onResponse: vi.fn(), onError, onClose },
-      sent: false,
-      closed: false,
-      closeAfterReady: false,
-      remoteSubscriptionId: null
-    })
-
-    await expect(connection.request('worktree.ps', undefined, 1000)).rejects.toMatchObject({
-      code: 'invalid_argument'
-    })
-    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'invalid_argument' }))
-    expect(onClose).toHaveBeenCalledTimes(1)
-    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 0 })
-    connection.notifyConnectionMayBeAvailable()
-    expect(connection.getDiagnostics()).toMatchObject({ parked: false, reconnectAttempt: 0 })
     connection.close()
   })
 
@@ -299,9 +234,7 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     await expect(connection.request('worktree.ps', undefined, 1000)).resolves.toMatchObject({
       ok: true
     })
-    ;(
-      connection as unknown as { recovery: { reconnectAttempt: number } }
-    ).recovery.reconnectAttempt = 3
+    ;(connection as unknown as { reconnectAttempt: number }).reconnectAttempt = 3
 
     await vi.waitFor(() =>
       expect(connection.getDiagnostics()).toMatchObject({ reconnectAttempt: 0 })
@@ -413,18 +346,18 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     connection.close()
   })
 
-  it('refreshes pending request timeouts when keepalive frames show server progress', async () => {
+  it('times out a stuck short RPC on its absolute deadline despite keepalive frames', async () => {
+    // Why: a keepalive on the shared socket is armed by an unrelated long-poll,
+    // not by this request. It must NOT extend a stuck short RPC's deadline —
+    // otherwise a hung server call hangs the caller forever (#7948).
     const server = await createServer({
+      silentMethods: ['worktree.hang'],
       sendKeepaliveBeforeResponse: true,
-      keepaliveDelayMs: 25,
-      responseDelayMs: 60
+      keepaliveDelayMs: 20
     })
     const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
 
-    await expect(connection.request('worktree.ps', undefined, 50)).resolves.toMatchObject({
-      ok: true,
-      result: { method: 'worktree.ps' }
-    })
+    await expect(connection.request('worktree.hang', undefined, 60)).rejects.toThrow('Timed out')
 
     connection.close()
   })
@@ -474,6 +407,83 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     connection.close()
   })
 
+  it('detects a half-open socket via client liveness, reconnects, and tags the replayed response', async () => {
+    // Why: the server keeps the TCP connection open but stops answering —
+    // no close frame, no pongs (autoPong disabled), no responses. This is the
+    // half-open devtunnel scenario from #7718: edge-triggered reconnect never
+    // fires, so client liveness must terminate the socket itself.
+    const server = await createServer({ disableAutoPong: true })
+    const connection = new RemoteRuntimeSharedControlConnection(server.pairing, {
+      liveness: { pingIntervalMs: 50, livenessTimeoutMs: 200 }
+    })
+    const onResponse = vi.fn()
+    const onClose = vi.fn()
+
+    await connection.subscribe('runtime.clientEvents.subscribe', null, 1000, {
+      onResponse,
+      onError: vi.fn(),
+      onClose
+    })
+    await vi.waitFor(() => expect(onResponse).toHaveBeenCalled())
+    expect(isRuntimeSubscriptionReplayResponse(onResponse.mock.calls[0]?.[0])).toBe(false)
+
+    // Liveness terminates the silent socket and the reconnect path replays
+    // the subscription on a fresh connection.
+    await vi.waitFor(() => expect(server.connectionCount()).toBeGreaterThanOrEqual(2), {
+      timeout: 5000
+    })
+    await vi.waitFor(
+      () =>
+        expect(
+          server.requests.filter((request) => request.method === 'runtime.clientEvents.subscribe')
+            .length
+        ).toBeGreaterThanOrEqual(2),
+      { timeout: 5000 }
+    )
+    // The first response after the reconnect replay carries the replay tag so
+    // snapshot freshness gates can accept the re-emitted snapshot.
+    await vi.waitFor(
+      () =>
+        expect(
+          onResponse.mock.calls.some(([response]) => isRuntimeSubscriptionReplayResponse(response))
+        ).toBe(true),
+      { timeout: 5000 }
+    )
+    expect(onClose).not.toHaveBeenCalled()
+
+    connection.close()
+  })
+
+  it('tears down the socket when a request times out and reconnects active subscriptions', async () => {
+    const server = await createServer({ silentMethods: ['worktree.hang'] })
+    const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
+    const onResponse = vi.fn()
+    const onClose = vi.fn()
+
+    await connection.subscribe('runtime.clientEvents.subscribe', null, 1000, {
+      onResponse,
+      onError: vi.fn(),
+      onClose
+    })
+    await vi.waitFor(() => expect(onResponse).toHaveBeenCalled())
+
+    // Why: mirrors RemoteRuntimeRequestConnection — a request the server never
+    // answered marks the socket as suspect and must not leave it 'ready'.
+    await expect(connection.request('worktree.hang', undefined, 50)).rejects.toThrow('Timed out')
+
+    await vi.waitFor(() => expect(server.connectionCount()).toBe(2), { timeout: 5000 })
+    await vi.waitFor(
+      () =>
+        expect(
+          server.requests.filter((request) => request.method === 'runtime.clientEvents.subscribe')
+        ).toHaveLength(2),
+      { timeout: 5000 }
+    )
+    expect(onClose).not.toHaveBeenCalled()
+
+    connection.close()
+  })
+
   it('rejects pending requests and records close diagnostics when the socket closes', async () => {
     const server = await createServer({ closeBeforeResponse: true })
     const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
@@ -502,7 +512,10 @@ async function createServer(
     closeAfterFirstStreamingResponse?: boolean
     closeBeforeResponse?: boolean
     suppressReadyFrame?: boolean
-    rejectAuthentication?: boolean
+    // Why: half-open simulation — the socket stays open but never answers
+    // protocol pings, like a wedged tunnel that swallows frames silently.
+    disableAutoPong?: boolean
+    silentMethods?: string[]
   } = {}
 ): Promise<TestServer> {
   const serverKeyPair = generateKeyPair()
@@ -510,7 +523,7 @@ async function createServer(
   const delayedResponses: (() => void)[] = []
   let connectionCount = 0
   let closedAfterFirstStreamingResponse = false
-  const wss = new WebSocketServer({ port: 0 })
+  const wss = new WebSocketServer({ port: 0, autoPong: options.disableAutoPong !== true })
   servers.push(wss)
 
   wss.on('connection', (ws) => {
@@ -540,13 +553,7 @@ async function createServer(
       }
       if (!authenticated) {
         authenticated = true
-        sendEncrypted(
-          ws,
-          sharedKey,
-          options.rejectAuthentication
-            ? { type: 'e2ee_error', error: { code: 'unauthorized' } }
-            : { type: 'e2ee_authenticated' }
-        )
+        sendEncrypted(ws, sharedKey, { type: 'e2ee_authenticated' })
         if (options.sendBinaryAfterAuth) {
           ws.send(Buffer.from([1, 2, 3]), { binary: true })
         }
@@ -606,10 +613,23 @@ function handleRequest(
     sendUnknownResponseBeforeResponse?: boolean
     closeAfterStreamingResponse?: () => boolean
     closeBeforeResponse?: boolean
+    silentMethods?: string[]
   },
   delayedResponses: (() => void)[]
 ): void {
   requests.push(request)
+  // Why: keepalives are armed by an unrelated long-poll and keep flowing even
+  // while a method is deliberately silent — emit them before the silent return.
+  if (options.sendKeepaliveBeforeResponse && options.keepaliveDelayMs !== undefined) {
+    const timer = setInterval(
+      () => sendEncrypted(ws, sharedKey, { _keepalive: true }),
+      options.keepaliveDelayMs
+    )
+    ws.once('close', () => clearInterval(timer))
+  }
+  if (options.silentMethods?.includes(request.method)) {
+    return
+  }
   if (options.closeBeforeResponse) {
     ws.close(4001, 'test close')
     return
@@ -636,13 +656,10 @@ function handleRequest(
     })
   }
   const closeAfterResponse = streaming && options.closeAfterStreamingResponse?.() === true
-  if (options.sendKeepaliveBeforeResponse) {
-    const sendKeepalive = (): void => sendEncrypted(ws, sharedKey, { _keepalive: true })
-    if (options.keepaliveDelayMs !== undefined) {
-      setTimeout(sendKeepalive, options.keepaliveDelayMs)
-    } else {
-      sendKeepalive()
-    }
+  // Delayed/periodic keepalives are handled by the interval above; here we only
+  // cover the immediate single-keepalive-before-response case.
+  if (options.sendKeepaliveBeforeResponse && options.keepaliveDelayMs === undefined) {
+    sendEncrypted(ws, sharedKey, { _keepalive: true })
   }
   if (options.delaySubscriptionReady && streaming) {
     delayedResponses.push(sendResponse)

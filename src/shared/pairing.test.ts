@@ -27,13 +27,6 @@ describe('pairing offer', () => {
     expect(decodePairingOffer(encodePairingOffer(scopedOffer))).toEqual(scopedOffer)
   })
 
-  it('round-trips optional ordered endpoint candidates', () => {
-    const candidates = [offer.endpoint, 'ws://100.64.1.20:6768']
-    expect(
-      decodePairingOffer(encodePairingOffer({ ...offer, endpoints: candidates })).endpoints
-    ).toEqual(candidates)
-  })
-
   it('encoded URL uses base64url (no +, /, or = characters)', () => {
     const url = encodePairingOffer(offer)
     const code = new URLSearchParams(url.slice(url.indexOf('?') + 1)).get('code')!

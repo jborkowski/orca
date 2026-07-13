@@ -56,12 +56,6 @@ export function closeAllRemoteRuntimeRequestConnections(): void {
   }
 }
 
-export function notifyAllRemoteRuntimeConnectionsMayBeAvailable(): void {
-  for (const { connection } of sharedControlConnections.values()) {
-    connection.notifyConnectionMayBeAvailable()
-  }
-}
-
 export function sendRemoteRuntimeSharedControlRequest<TResult>(
   environmentId: string,
   pairing: PairingOffer,
@@ -123,10 +117,5 @@ function getSharedControlConnection(
 }
 
 function getPairingKey(pairing: PairingOffer): string {
-  return [
-    pairing.endpoint,
-    ...(pairing.endpoints ?? []),
-    pairing.deviceToken,
-    pairing.publicKeyB64
-  ].join('\0')
+  return [pairing.endpoint, pairing.deviceToken, pairing.publicKeyB64].join('\0')
 }

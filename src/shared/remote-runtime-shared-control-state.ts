@@ -14,7 +14,6 @@ import { tagRuntimeSubscriptionReplayResponse } from './runtime-subscription-rep
 export function buildSharedControlDiagnostics(args: {
   state: SharedControlConnectionState
   reconnecting: boolean
-  parked: boolean
   pendingRequestCount: number
   subscriptionCount: number
   reconnectAttempt: number
@@ -24,7 +23,6 @@ export function buildSharedControlDiagnostics(args: {
 }): RemoteRuntimeSharedConnectionDiagnostics {
   return {
     state: args.reconnecting ? 'reconnecting' : args.state,
-    parked: args.parked,
     pendingRequestCount: args.pendingRequestCount,
     subscriptionCount: args.subscriptionCount,
     reconnectAttempt: args.reconnectAttempt,

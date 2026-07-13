@@ -494,7 +494,6 @@ export class OrcaRuntimeRpcServer {
 
   createPairingOffer(args: {
     address?: string | null
-    addresses?: string[]
     name?: string
     rotate?: boolean
     scope?: DeviceScope
@@ -514,12 +513,6 @@ export class OrcaRuntimeRpcServer {
     }
 
     const endpoint = resolvePairingEndpoint(rawEndpoint, args.address)
-    const endpoints = Array.from(
-      new Set([
-        endpoint,
-        ...(args.addresses ?? []).map((address) => resolvePairingEndpoint(rawEndpoint, address))
-      ])
-    )
     const deviceName = args.name ?? `CLI ${new Date().toLocaleDateString()}`
     const scope = args.scope ?? 'runtime'
     const device = args.rotate
@@ -528,7 +521,6 @@ export class OrcaRuntimeRpcServer {
     const pairingUrl = encodePairingOffer({
       v: PAIRING_OFFER_VERSION,
       endpoint,
-      endpoints,
       deviceToken: device.token,
       publicKeyB64,
       scope

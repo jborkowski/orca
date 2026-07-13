@@ -20,8 +20,10 @@ import {
   type ReactNode
 } from 'react'
 import { connect, type RpcClient } from './rpc-client'
+import { connectionLogStore } from './connection-log-buffer'
 import { subscribeConnectionRevivalTriggers } from './connection-revival-triggers'
-import { loadHosts, promoteHostEndpoint } from './host-store'
+import { HostClientOpenRegistry } from './host-client-open-registry'
+import { loadHosts } from './host-store'
 import type { ConnectionState, HostProfile } from './types'
 
 type StoreEntry = {
@@ -65,7 +67,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   // Pending opens (avoid two acquire() callers in the same render racing the
   // host lookup). Keyed by hostId, value is a sentinel resolved when the
   // entry materialises.
-  const pendingOpensRef = useRef<Map<string, Promise<void>>>(new Map())
+  const pendingOpensRef = useRef(new HostClientOpenRegistry())
 
   // Why: a fast-path cache of already-loaded HostProfiles. Screens that
   // have run loadHosts() can call primeHosts() to populate this and skip
@@ -90,19 +92,18 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   }
 
   const closeEntry = useCallback((hostId: string) => {
+    pendingOpensRef.current.cancel(hostId)
+    primedHostsRef.current.delete(hostId)
     const entry = storeRef.current.get(hostId)
-    if (!entry) {
-      return
-    }
-    entry.unsubState()
-    entry.client.close()
+    entry?.unsubState()
     storeRef.current.delete(hostId)
+    entry?.client.close()
     notifyHostState(hostId, 'disconnected')
     notifyAllHosts()
   }, [])
 
   const openEntry = useCallback(async (hostId: string): Promise<StoreEntry | null> => {
-    const existing = pendingOpensRef.current.get(hostId)
+    const existing = pendingOpensRef.current.getActivePromise(hostId)
     if (existing) {
       await existing
       return storeRef.current.get(hostId) ?? null
@@ -111,7 +112,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
     const promise = new Promise<void>((res) => {
       resolve = res
     })
-    pendingOpensRef.current.set(hostId, promise)
+    const pendingOpen = pendingOpensRef.current.register(hostId, promise)
 
     try {
       // Why: prefer the primed cache (populated by primeHosts when the
@@ -133,8 +134,17 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
           return null
         }
         if (!host) {
+          // Why: returning silently leaves mounted screens on a permanent
+          // spinner (STA-1511) — surface 'disconnected' so they can render
+          // their waiting/retry affordance instead.
+          notifyHostState(hostId, 'disconnected')
+          notifyAllHosts()
           return null
         }
+      }
+
+      if (pendingOpen.cancelled) {
+        return null
       }
 
       // Re-check after any await — another acquire() may have completed.
@@ -146,17 +156,10 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
       let client: RpcClient
       try {
         client = connect(host.endpoint, host.deviceToken, host.publicKeyB64, {
-          endpoints: host.endpoints,
-          onAuthenticatedEndpoint: (endpoint) => {
-            const current = primedHostsRef.current.get(hostId)
-            if (current) {
-              current.endpoint = endpoint
-              current.endpoints = Array.from(new Set([endpoint, ...(current.endpoints ?? [])]))
-            }
-            void promoteHostEndpoint(hostId, endpoint).catch((error) => {
-              console.warn('[net] failed to promote authenticated endpoint', { hostId, error })
-            })
-          }
+          // Why: retain reconnect lifecycle events for the Connection Log
+          // screen — without this the reasons a host is stuck live only in
+          // console.log, which users can't see or share.
+          onLog: (entry) => connectionLogStore.append(hostId, entry)
         })
       } catch {
         // Why: connect() can throw synchronously if the public key is
@@ -185,7 +188,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
       notifyAllHosts()
       return entry
     } finally {
-      pendingOpensRef.current.delete(hostId)
+      pendingOpensRef.current.deleteIfCurrent(hostId, pendingOpen)
       resolve()
     }
   }, [])
@@ -327,6 +330,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const store = storeRef.current
     return () => {
+      pendingOpensRef.current.cancelAll()
       for (const [hostId] of store) {
         closeEntry(hostId)
       }
@@ -339,7 +343,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return subscribeConnectionRevivalTriggers(() => {
       for (const entry of storeRef.current.values()) {
-        entry.client.notifyConnectionMayBeAvailable()
+        entry.client.notifyForeground()
       }
     })
   }, [])
@@ -417,6 +421,12 @@ export function useHostClient(hostId: string | undefined): {
       const found = ctx.getAllClients().find((entry) => entry.hostId === hostId)
       if (found && found.client !== clientRef.current) {
         clientRef.current = found.client
+        force((n) => n + 1)
+      } else if (!found && clientRef.current) {
+        // Why: closeHost deletes the entry without a replacement; holding the
+        // closed client would let screens keep issuing requests that can never
+        // resolve (STA-1511). Null it so they render disconnected states.
+        clientRef.current = null
         force((n) => n + 1)
       }
     })

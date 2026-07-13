@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, BackHandler } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
@@ -9,12 +9,9 @@ import {
   type PairingConnectionAttempt
 } from '../src/transport/pairing-connection-attempt'
 import { connect } from '../src/transport/rpc-client'
-import { savePairedHost } from '../src/transport/save-paired-host'
+import { saveHost, getNextHostName } from '../src/transport/host-store'
 import type { ConnectionLogEntry, RpcResponse } from '../src/transport/types'
-import { spacing, radii, typography } from '../src/theme/mobile-theme'
-import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
-import type { MobileEinkChrome } from '../src/theme/mobile-eink-chrome'
-import { useMobileTheme } from '../src/theme/mobile-theme-context'
+import { colors, spacing, radii, typography } from '../src/theme/mobile-theme'
 import { ConnectionLog } from '../src/components/ConnectionLog'
 
 type Status = 'awaiting-confirm' | 'connecting' | 'error'
@@ -30,8 +27,6 @@ export default function PairConfirmScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ code?: string }>()
-  const { colors, chrome } = useMobileTheme()
-  const styles = useMemo(() => createPairConfirmStyles(colors, chrome), [colors, chrome])
   const [status, setStatus] = useState<Status>('awaiting-confirm')
   const [errorMessage, setErrorMessage] = useState('')
   const [logs, setLogs] = useState<ConnectionLogEntry[]>([])
@@ -85,7 +80,6 @@ export default function PairConfirmScreen() {
     logsRef.current = []
     setLogs([])
     let client: ReturnType<typeof connect> | null = null
-    let authenticatedEndpoint = offer.endpoint
     activePairingAttemptRef.current?.dispose()
 
     // Why: split the try/catch around the network call vs the local save
@@ -99,10 +93,6 @@ export default function PairConfirmScreen() {
     activePairingAttemptRef.current = attempt
     try {
       client = connect(offer.endpoint, offer.deviceToken, offer.publicKeyB64, {
-        endpoints: offer.endpoints,
-        onAuthenticatedEndpoint: (endpoint) => {
-          authenticatedEndpoint = endpoint
-        },
         onLog: (entry) => {
           if (!mountedRef.current || activePairingAttemptRef.current !== attempt) {
             return
@@ -154,7 +144,16 @@ export default function PairConfirmScreen() {
     }
 
     try {
-      const hostId = await savePairedHost(offer, authenticatedEndpoint)
+      const hostId = `host-${Date.now()}`
+      const hostName = await getNextHostName()
+      await saveHost({
+        id: hostId,
+        name: hostName,
+        endpoint: offer.endpoint,
+        deviceToken: offer.deviceToken,
+        publicKeyB64: offer.publicKeyB64,
+        lastConnected: Date.now()
+      })
       if (!mountedRef.current) {
         return
       }
@@ -190,13 +189,7 @@ export default function PairConfirmScreen() {
               <Pressable style={styles.primaryButton} onPress={() => void confirm()}>
                 <Text style={styles.primaryButtonText}>Pair</Text>
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  pressed && styles.secondaryButtonPressed
-                ]}
-                onPress={cancel}
-              >
+              <Pressable style={styles.secondaryButton} onPress={cancel}>
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
             </View>
@@ -233,97 +226,92 @@ export default function PairConfirmScreen() {
   )
 }
 
-function createPairConfirmStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.bgBase,
-      padding: spacing.lg
-    },
-    backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: spacing.sm
-    },
-    content: {
-      flex: 1,
-      justifyContent: 'center',
-      paddingHorizontal: spacing.sm,
-      // Why: nudges the centered group slightly above the geometric
-      // middle so the eye reads it as visually centered above the home
-      // indicator / nav bar.
-      paddingBottom: spacing.xl * 2
-    },
-    title: {
-      fontSize: typography.titleSize,
-      fontWeight: '600',
-      color: colors.textPrimary,
-      marginBottom: spacing.sm,
-      textAlign: 'center'
-    },
-    subtitle: {
-      fontSize: typography.bodySize,
-      color: colors.textSecondary,
-      lineHeight: 20,
-      marginBottom: spacing.xl,
-      textAlign: 'center',
-      maxWidth: 520,
-      alignSelf: 'center'
-    },
-    actionStack: {
-      width: '100%',
-      maxWidth: 360,
-      alignSelf: 'center'
-    },
-    primaryButton: {
-      width: '100%',
-      backgroundColor: colors.textPrimary,
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.sm + 2,
-      borderRadius: radii.button,
-      alignItems: 'center',
-      marginBottom: spacing.sm
-    },
-    primaryButtonText: {
-      color: colors.bgBase,
-      fontSize: typography.bodySize,
-      fontWeight: '600'
-    },
-    secondaryButton: {
-      width: '100%',
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.sm + 2,
-      borderRadius: radii.button,
-      alignItems: 'center'
-    },
-    secondaryButtonPressed: {
-      ...chrome.listRowPressed
-    },
-    secondaryButtonText: {
-      color: colors.textSecondary,
-      fontSize: typography.bodySize,
-      fontWeight: '500'
-    },
-    connectingText: {
-      color: colors.textSecondary,
-      fontSize: typography.bodySize,
-      marginTop: spacing.lg,
-      textAlign: 'center'
-    },
-    logSlot: {
-      width: '100%',
-      marginTop: spacing.lg,
-      marginBottom: spacing.md
-    },
-    errorText: {
-      color: colors.statusRed,
-      fontSize: typography.bodySize,
-      textAlign: 'center',
-      marginBottom: spacing.xl,
-      lineHeight: 20
-    }
-  })
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgBase,
+    padding: spacing.lg
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    // Why: nudges the centered group slightly above the geometric
+    // middle so the eye reads it as visually centered above the home
+    // indicator / nav bar.
+    paddingBottom: spacing.xl * 2
+  },
+  title: {
+    fontSize: typography.titleSize,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: 'center'
+  },
+  subtitle: {
+    fontSize: typography.bodySize,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+    textAlign: 'center',
+    maxWidth: 520,
+    alignSelf: 'center'
+  },
+  actionStack: {
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center'
+  },
+  primaryButton: {
+    width: '100%',
+    backgroundColor: colors.textPrimary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.button,
+    alignItems: 'center',
+    marginBottom: spacing.sm
+  },
+  primaryButtonText: {
+    color: colors.bgBase,
+    fontSize: typography.bodySize,
+    fontWeight: '600'
+  },
+  secondaryButton: {
+    width: '100%',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.button,
+    alignItems: 'center'
+  },
+  secondaryButtonText: {
+    color: colors.textSecondary,
+    fontSize: typography.bodySize,
+    fontWeight: '500'
+  },
+  connectingText: {
+    color: colors.textSecondary,
+    fontSize: typography.bodySize,
+    marginTop: spacing.lg,
+    textAlign: 'center'
+  },
+  logSlot: {
+    width: '100%',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md
+  },
+  errorText: {
+    color: colors.statusRed,
+    fontSize: typography.bodySize,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 20
+  }
+})
