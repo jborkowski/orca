@@ -37,15 +37,18 @@ function readMobileVersion() {
 
 function stageDesktopArtifacts(version) {
   const distDir = path.join(repoRoot, 'dist')
-  const patterns = [`orca-macos-arm64.dmg`, `orca-macos-arm64.zip`]
+  const artifacts = [
+    ['orca-macos-arm64.dmg', 'orca-macos-arm64.dmg'],
+    [`Orca-${version}-arm64-mac.zip`, `Orca-${version}-arm64-mac.zip`]
+  ]
   fs.mkdirSync(desktopOut, { recursive: true })
-  for (const name of patterns) {
-    const source = path.join(distDir, name)
+  for (const [sourceName, destinationName] of artifacts) {
+    const source = path.join(distDir, sourceName)
     if (!fs.existsSync(source)) {
       console.warn(`Missing desktop artifact: ${source}`)
       continue
     }
-    const dest = path.join(desktopOut, name)
+    const dest = path.join(desktopOut, destinationName)
     fs.copyFileSync(source, dest)
     console.log(`Staged ${dest}`)
   }
@@ -60,6 +63,24 @@ function stageDesktopArtifacts(version) {
       ''
     ].join('\n')
   )
+}
+
+function findDeveloperIdApplicationIdentity() {
+  const result = spawnSync('security', ['find-identity', '-v', '-p', 'codesigning'], {
+    encoding: 'utf8'
+  })
+  if (result.status !== 0) {
+    throw new Error('Unable to query the macOS code-signing identities')
+  }
+  const match = result.stdout.match(
+    /^\s*\d+\)\s+([0-9A-F]{40})\s+"Developer ID Application:[^"]+"/m
+  )
+  if (!match) {
+    throw new Error('A Developer ID Application identity is required for a fork desktop release')
+  }
+  // Why: certificates with the same display name are common after renewal;
+  // the SHA-1 identity keeps codesign from rejecting the name as ambiguous.
+  return match[1]
 }
 
 function findJavaHome() {
@@ -98,6 +119,7 @@ function findAndroidHome() {
 }
 
 function buildDesktopArm64(version) {
+  const signingIdentity = findDeveloperIdApplicationIdentity()
   run('pnpm', ['run', 'build:desktop'])
   run('pnpm', ['run', 'build:computer-macos'])
   run('pnpm', ['run', 'build:notification-status-macos'])
@@ -116,12 +138,19 @@ function buildDesktopArm64(version) {
     ],
     {
       env: {
-        CSC_IDENTITY_AUTO_DISCOVERY: 'false',
-        CSC_NAME: '-',
-        ORCA_COMPUTER_MACOS_SIGN_IDENTITY: '-'
+        CSC_NAME: signingIdentity,
+        ORCA_COMPUTER_MACOS_SIGN_IDENTITY: signingIdentity,
+        ORCA_MAC_RELEASE: '1',
+        // Why: fork releases use Developer ID signing and hardened runtime but
+        // currently lack the Apple credentials required for notarization.
+        ORCA_MAC_NOTARIZE: '0'
       }
     }
   )
+  run('node', [
+    'config/scripts/verify-macos-app-signing.cjs',
+    path.join(repoRoot, 'dist', 'mac-arm64', 'Orca.app')
+  ])
   stageDesktopArtifacts(version)
 }
 
@@ -207,7 +236,7 @@ function writeManifest(version, mobileVersion, androidBuilt, iosBuilt) {
     artifacts: {
       desktop: {
         macosArm64Dmg: path.join(desktopOut, 'orca-macos-arm64.dmg'),
-        macosArm64Zip: path.join(desktopOut, 'orca-macos-arm64.zip')
+        macosArm64Zip: path.join(desktopOut, `Orca-${version}-arm64-mac.zip`)
       },
       mobile: {
         androidApk: androidBuilt

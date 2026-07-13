@@ -11,8 +11,10 @@ const {
   prunePackagedRuntimeNodeModules,
   verifyPackagedMainRuntimeDeps
 } = require('./packaged-runtime-node-modules.cjs')
+const { verifyMacAppSigning } = require('./scripts/verify-macos-app-signing.cjs')
 
 const isMacRelease = process.env.ORCA_MAC_RELEASE === '1'
+const shouldNotarizeMacRelease = isMacRelease && process.env.ORCA_MAC_NOTARIZE !== '0'
 const isLinuxArm64Release = process.env.ORCA_LINUX_ARM64_RELEASE === '1'
 const featureWallResources = {
   from: 'resources/onboarding/feature-wall',
@@ -171,6 +173,18 @@ module.exports = {
       )
     }
   },
+  afterSign: async (context) => {
+    if (!isMacRelease || context.electronPlatformName !== 'darwin') {
+      return
+    }
+    const appPath = join(
+      context.appOutDir,
+      `${context.packager.appInfo.productFilename}.app`
+    )
+    // Why: `codesign --deep` can pass while an embedded Electron dylib has no
+    // Team ID, which dyld rejects at launch under hardened runtime.
+    verifyMacAppSigning(appPath)
+  },
   win: {
     executableName: 'Orca',
     // Why: Windows installers are signed after electron-builder packaging by
@@ -240,7 +254,7 @@ module.exports = {
     // explicit release path so production artifacts remain strict while dev
     // artifacts do not fail with broken ad-hoc launch behavior.
     hardenedRuntime: isMacRelease,
-    notarize: isMacRelease,
+    notarize: shouldNotarizeMacRelease,
     extraResources: [
       ...commonExtraResources,
       macSpeechNativeResource,
