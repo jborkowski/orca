@@ -20,7 +20,10 @@ import {
   type MobileDirEntry
 } from './file-tree'
 import type { RpcSuccess } from '../transport/types'
-import { colors } from '../theme/mobile-theme'
+import { triggerSelection } from '../platform/haptics'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
+import { createMobileFileExplorerStyles } from './mobile-file-explorer-styles'
 import {
   beginDirectoryLoad,
   createDirectoryLoadRevisions,
@@ -45,6 +48,8 @@ export function MobileFileExplorerPanel(props: {
   onRequestClose?: () => void
 }) {
   const { hostId, worktreeId, name, embedded, onRequestClose } = props
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFileExplorerStyles(colors, chrome), [colors, chrome])
   const router = useRouter()
   const { client, state: connState } = useHostClient(hostId)
   const forceReconnect = useForceReconnect()

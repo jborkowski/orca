@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Text, TextInput, View } from 'react-native'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { MobileFilePreviewLineColumn } from './mobile-file-preview-line-column'
 import { textOffsetForLineColumn } from './mobile-file-preview-line-column'
-import { filePreviewStyles as styles } from './mobile-file-preview-styles'
+import { createMobileFilePreviewStyles } from './mobile-file-preview-styles'
 
 type Props = {
   title: string
@@ -19,6 +20,8 @@ export function MobileFilePreviewEditableSource({
   saveError,
   onDraftChange
 }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobileFilePreviewStyles(colors, chrome), [colors, chrome])
   const selectionTargetKey = lineColumn
     ? `${title}:${lineColumn.line}:${lineColumn.column ?? ''}`
     : ''

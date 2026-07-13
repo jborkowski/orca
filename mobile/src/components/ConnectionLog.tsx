@@ -1,20 +1,16 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ConnectionLogEntry } from '../transport/types'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 
 type Props = {
   entries: ConnectionLogEntry[]
   // Tag printed before the first entry so it's clear what's being logged
   // (e.g. 'Pairing' vs 'Reconnect').
   title?: string
-}
-
-const LEVEL_COLOR: Record<ConnectionLogEntry['level'], string> = {
-  info: colors.textSecondary,
-  success: colors.statusGreen,
-  warn: colors.statusAmber,
-  error: colors.statusRed
 }
 
 const LEVEL_GLYPH: Record<ConnectionLogEntry['level'], string> = {
@@ -38,6 +34,17 @@ function formatTime(ts: number, baseTs: number): string {
 }
 
 export function ConnectionLog({ entries, title }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createConnectionLogStyles(colors, chrome), [colors, chrome])
+  const levelColor = useMemo(
+    () => ({
+      info: colors.textSecondary,
+      success: colors.statusGreen,
+      warn: colors.statusAmber,
+      error: colors.statusRed
+    }),
+    [colors]
+  )
   const scrollRef = useRef<ScrollView | null>(null)
 
   if (entries.length === 0) {
@@ -58,11 +65,11 @@ export function ConnectionLog({ entries, title }: Props) {
         {entries.map((entry) => (
           <View key={entry.id} style={styles.row}>
             <Text style={styles.timestamp}>{formatTime(entry.ts, baseTs)}</Text>
-            <Text style={[styles.glyph, { color: LEVEL_COLOR[entry.level] }]}>
+            <Text style={[styles.glyph, { color: levelColor[entry.level] }]}>
               {LEVEL_GLYPH[entry.level]}
             </Text>
             <View style={styles.rowText}>
-              <Text style={[styles.message, { color: LEVEL_COLOR[entry.level] }]}>
+              <Text style={[styles.message, { color: levelColor[entry.level] }]}>
                 {entry.message}
               </Text>
               {entry.detail && (
@@ -78,63 +85,62 @@ export function ConnectionLog({ entries, title }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    maxHeight: 240,
-    backgroundColor: colors.bgPanel,
-    borderRadius: radii.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md
-  },
-  title: {
-    fontSize: typography.metaSize,
-    fontFamily: typography.monoFamily,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.xs
-  },
-  scroll: {
-    maxHeight: 200
-  },
-  scrollContent: {
-    gap: 6
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm
-  },
-  timestamp: {
-    fontFamily: typography.monoFamily,
-    fontSize: typography.metaSize,
-    color: colors.textMuted,
-    width: 52,
-    paddingTop: 1
-  },
-  glyph: {
-    fontFamily: typography.monoFamily,
-    fontSize: typography.metaSize,
-    width: 12,
-    textAlign: 'center',
-    paddingTop: 1
-  },
-  rowText: {
-    flex: 1
-  },
-  message: {
-    fontFamily: typography.monoFamily,
-    fontSize: typography.metaSize,
-    lineHeight: 16
-  },
-  detail: {
-    fontFamily: typography.monoFamily,
-    fontSize: 11,
-    color: colors.textMuted,
-    lineHeight: 14,
-    marginTop: 1
-  }
-})
+function createConnectionLogStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      width: '100%',
+      maxHeight: 240,
+      ...chrome.sectionCard,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md
+    },
+    title: {
+      fontSize: typography.metaSize,
+      fontFamily: typography.monoFamily,
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: spacing.xs
+    },
+    scroll: {
+      maxHeight: 200
+    },
+    scrollContent: {
+      gap: 6
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm
+    },
+    timestamp: {
+      fontFamily: typography.monoFamily,
+      fontSize: typography.metaSize,
+      color: colors.textMuted,
+      width: 52,
+      paddingTop: 1
+    },
+    glyph: {
+      fontFamily: typography.monoFamily,
+      fontSize: typography.metaSize,
+      width: 12,
+      textAlign: 'center',
+      paddingTop: 1
+    },
+    rowText: {
+      flex: 1
+    },
+    message: {
+      fontFamily: typography.monoFamily,
+      fontSize: typography.metaSize,
+      lineHeight: 16
+    },
+    detail: {
+      fontFamily: typography.monoFamily,
+      fontSize: 11,
+      color: colors.textMuted,
+      lineHeight: 14,
+      marginTop: 1
+    }
+  })
+}

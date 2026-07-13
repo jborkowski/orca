@@ -191,17 +191,24 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     connection.close()
   })
 
-  it('emits one final close when reconnect attempts are exhausted', async () => {
+  it('parks after retry exhaustion, retains subscriptions, and replays once on revival', async () => {
     const server = await createServer()
     const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
     const onClose = vi.fn()
 
     const unsafe = connection as unknown as {
-      reconnectAttempt: number
+      recovery: {
+        reconnectAttempt: number
+        schedule: (args: {
+          intentionallyClosed: boolean
+          subscriptionCount: number
+          open: () => void
+        }) => void
+      }
       subscriptions: Map<string, unknown>
-      scheduleReconnect: () => void
+      open: () => void
     }
-    unsafe.reconnectAttempt = 7
+    unsafe.recovery.reconnectAttempt = 7
     unsafe.subscriptions.set('sub-1', {
       requestId: 'sub-1',
       method: 'runtime.clientEvents.subscribe',
@@ -213,15 +220,74 @@ describe('RemoteRuntimeSharedControlConnection', () => {
       remoteSubscriptionId: null
     })
 
-    unsafe.scheduleReconnect()
-
-    expect(onClose).toHaveBeenCalledTimes(1)
-    expect(connection.getDiagnostics()).toMatchObject({
-      state: 'closed',
-      reconnectAttempt: 7,
-      subscriptionCount: 0
+    unsafe.recovery.schedule({
+      intentionallyClosed: false,
+      subscriptionCount: unsafe.subscriptions.size,
+      open: () => unsafe.open()
     })
 
+    expect(onClose).not.toHaveBeenCalled()
+    expect(connection.getDiagnostics()).toMatchObject({
+      state: 'closed',
+      parked: true,
+      reconnectAttempt: 7,
+      subscriptionCount: 1
+    })
+
+    connection.notifyConnectionMayBeAvailable()
+    await vi.waitFor(() =>
+      expect(server.requests.map((request) => request.method)).toEqual([
+        'runtime.clientEvents.subscribe'
+      ])
+    )
+    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 1 })
+    expect(onClose).not.toHaveBeenCalled()
+
+    connection.close()
+  })
+
+  it('treats authentication rejection as terminal instead of parking', async () => {
+    const server = await createServer({ rejectAuthentication: true })
+    const connection = new RemoteRuntimeSharedControlConnection(server.pairing)
+
+    await expect(connection.request('worktree.ps', undefined, 1000)).rejects.toMatchObject({
+      code: 'unauthorized'
+    })
+    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 0 })
+    connection.notifyConnectionMayBeAvailable()
+    expect(server.connectionCount()).toBe(1)
+    connection.close()
+  })
+
+  it('treats an invalid pairing key as terminal instead of parking subscriptions', async () => {
+    const connection = new RemoteRuntimeSharedControlConnection({
+      v: 2,
+      endpoint: 'ws://127.0.0.1:6768',
+      deviceToken: 'token',
+      publicKeyB64: 'invalid-key'
+    })
+    const onError = vi.fn()
+    const onClose = vi.fn()
+    const unsafe = connection as unknown as { subscriptions: Map<string, unknown> }
+    unsafe.subscriptions.set('sub-invalid-key', {
+      requestId: 'sub-invalid-key',
+      method: 'runtime.clientEvents.subscribe',
+      params: null,
+      callbacks: { onResponse: vi.fn(), onError, onClose },
+      sent: false,
+      closed: false,
+      closeAfterReady: false,
+      remoteSubscriptionId: null
+    })
+
+    await expect(connection.request('worktree.ps', undefined, 1000)).rejects.toMatchObject({
+      code: 'invalid_argument'
+    })
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'invalid_argument' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(connection.getDiagnostics()).toMatchObject({ parked: false, subscriptionCount: 0 })
+    connection.notifyConnectionMayBeAvailable()
+    expect(connection.getDiagnostics()).toMatchObject({ parked: false, reconnectAttempt: 0 })
     connection.close()
   })
 
@@ -234,7 +300,9 @@ describe('RemoteRuntimeSharedControlConnection', () => {
     await expect(connection.request('worktree.ps', undefined, 1000)).resolves.toMatchObject({
       ok: true
     })
-    ;(connection as unknown as { reconnectAttempt: number }).reconnectAttempt = 3
+    ;(
+      connection as unknown as { recovery: { reconnectAttempt: number } }
+    ).recovery.reconnectAttempt = 3
 
     await vi.waitFor(() =>
       expect(connection.getDiagnostics()).toMatchObject({ reconnectAttempt: 0 })
@@ -512,10 +580,7 @@ async function createServer(
     closeAfterFirstStreamingResponse?: boolean
     closeBeforeResponse?: boolean
     suppressReadyFrame?: boolean
-    // Why: half-open simulation — the socket stays open but never answers
-    // protocol pings, like a wedged tunnel that swallows frames silently.
-    disableAutoPong?: boolean
-    silentMethods?: string[]
+    rejectAuthentication?: boolean
   } = {}
 ): Promise<TestServer> {
   const serverKeyPair = generateKeyPair()
@@ -553,7 +618,13 @@ async function createServer(
       }
       if (!authenticated) {
         authenticated = true
-        sendEncrypted(ws, sharedKey, { type: 'e2ee_authenticated' })
+        sendEncrypted(
+          ws,
+          sharedKey,
+          options.rejectAuthentication
+            ? { type: 'e2ee_error', error: { code: 'unauthorized' } }
+            : { type: 'e2ee_authenticated' }
+        )
         if (options.sendBinaryAfterAuth) {
           ws.send(Buffer.from([1, 2, 3]), { binary: true })
         }

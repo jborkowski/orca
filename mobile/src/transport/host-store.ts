@@ -144,14 +144,26 @@ async function doLoadHosts(): Promise<HostProfile[]> {
       token = fetched
       tokenCache.set(stored.id, token)
     }
-    out.push({ ...stored, deviceToken: token })
+    out.push({ ...normalizeStoredHost(stored.data), deviceToken: token })
   }
   return out
 }
 
 async function loadStoredHosts(): Promise<StoredHostProfile[]> {
   try {
-    return parseStoredHosts(await AsyncStorage.getItem(STORAGE_KEY)) ?? []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed.flatMap((item) => {
+      // Why: same drop-old-records rule as loadHosts; keeps internal
+      // mutators from re-persisting pre-v0.0.3 entries.
+      if (item && typeof item === 'object' && 'deviceToken' in item) {
+        return []
+      }
+      const result = StoredHostProfileSchema.safeParse(item)
+      return result.success ? [normalizeStoredHost(result.data)] : []
+    })
   } catch {
     return []
   }
@@ -191,9 +203,29 @@ function toStored(host: HostProfile): StoredHostProfile {
     id: host.id,
     name: host.name,
     endpoint: host.endpoint,
+    endpoints: normalizeEndpoints(host.endpoint, host.endpoints),
     publicKeyB64: host.publicKeyB64,
     lastConnected: host.lastConnected
   }
+}
+
+function normalizeStoredHost(host: StoredHostProfile): StoredHostProfile {
+  return { ...host, endpoints: normalizeEndpoints(host.endpoint, host.endpoints) }
+}
+
+function normalizeEndpoints(endpoint: string, endpoints?: string[]): string[] {
+  return Array.from(new Set([endpoint, ...(endpoints ?? [])]))
+}
+
+export async function promoteHostEndpoint(hostId: string, endpoint: string): Promise<void> {
+  const hosts = await loadStoredHosts()
+  const host = hosts.find((candidate) => candidate.id === hostId)
+  if (!host || host.endpoint === endpoint) {
+    return
+  }
+  host.endpoints = normalizeEndpoints(endpoint, host.endpoints)
+  host.endpoint = endpoint
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(hosts))
 }
 
 export async function saveHost(host: HostProfile): Promise<void> {

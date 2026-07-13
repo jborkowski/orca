@@ -1,6 +1,12 @@
-import { StyleSheet, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { colors } from '../../theme/mobile-theme'
+import { useEffect, useMemo } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
+import { ChevronLeft, X } from 'lucide-react-native'
+import { radii, spacing, typography } from '../../theme/mobile-theme'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../../theme/mobile-eink-chrome'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import type { ConnectionState } from '../../transport/types'
 import type { RpcClient } from '../../transport/rpc-client'
 import type { MobileGitStatusResult } from '../../source-control/mobile-git-status'
@@ -34,6 +40,15 @@ export function MobilePrViewPanelBody({
   controller
 }: Props) {
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrViewPanelStyles(colors, chrome), [colors, chrome])
+  const controller = useMobilePrSidebarController({
+    client,
+    connState,
+    worktreeId,
+    branch,
+    headSha
+  })
 
   const sidebarState = !branchContextLoaded
     ? ({ kind: 'loading' } as const)
@@ -69,9 +84,40 @@ export function MobilePrViewPanelBody({
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase
-  }
-})
+function createMobilePrViewPanelStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgBase
+    },
+    header: {
+      backgroundColor: chrome.sectionCard.backgroundColor,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderSubtle
+    },
+    topBar: {
+      minHeight: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.md
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.button
+    },
+    iconButtonPressed: {
+      ...chrome.listRowPressed
+    },
+    title: {
+      flex: 1,
+      minWidth: 0,
+      color: colors.textPrimary,
+      fontSize: typography.titleSize,
+      fontWeight: '600'
+    }
+  })
+}

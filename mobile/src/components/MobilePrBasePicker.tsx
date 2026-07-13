@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Check, ChevronDown } from 'lucide-react-native'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { radii, spacing, typography } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { RpcClient } from '../transport/rpc-client'
 import { searchBaseRefs } from '../source-control/mobile-base-ref-search'
 
@@ -24,6 +27,8 @@ export function MobilePrBasePicker({
   onChange,
   editable = true
 }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrBasePickerStyles(colors, chrome), [colors, chrome])
   const [results, setResults] = useState<string[]>([])
   const [focused, setFocused] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -119,52 +124,55 @@ export function MobilePrBasePicker({
   )
 }
 
-const styles = StyleSheet.create({
-  inputShell: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.bgRaised,
-    borderRadius: radii.input,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs
-  },
-  inputShellDisabled: {
-    opacity: 0.6
-  },
-  input: {
-    flex: 1,
-    minWidth: 0,
-    padding: 0,
-    color: colors.textPrimary,
-    fontSize: typography.bodySize,
-    fontFamily: typography.monoFamily
-  },
-  results: {
-    marginTop: spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
-    backgroundColor: colors.bgPanel,
-    overflow: 'hidden'
-  },
-  resultRow: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle
-  },
-  resultRowPressed: { backgroundColor: colors.bgRaised },
-  resultText: {
-    flex: 1,
-    minWidth: 0,
-    color: colors.textPrimary,
-    fontSize: typography.bodySize,
-    fontFamily: typography.monoFamily
-  }
-})
+function createMobilePrBasePickerStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    inputShell: {
+      minHeight: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.bgRaised,
+      borderRadius: radii.input,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs
+    },
+    inputShellDisabled: {
+      opacity: 0.6
+    },
+    input: {
+      flex: 1,
+      minWidth: 0,
+      padding: 0,
+      color: colors.textPrimary,
+      fontSize: typography.bodySize,
+      fontFamily: typography.monoFamily
+    },
+    results: {
+      marginTop: spacing.xs,
+      ...chrome.sectionCard,
+      overflow: 'hidden'
+    },
+    resultRow: {
+      minHeight: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderSubtle
+    },
+    resultRowPressed: {
+      ...chrome.listRowPressed
+    },
+    resultText: {
+      flex: 1,
+      minWidth: 0,
+      color: colors.textPrimary,
+      fontSize: typography.bodySize,
+      fontFamily: typography.monoFamily
+    }
+  })
+}

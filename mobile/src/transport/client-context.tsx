@@ -22,8 +22,7 @@ import {
 import { connect, type RpcClient } from './rpc-client'
 import { connectionLogStore } from './connection-log-buffer'
 import { subscribeConnectionRevivalTriggers } from './connection-revival-triggers'
-import { HostClientOpenRegistry } from './host-client-open-registry'
-import { loadHosts } from './host-store'
+import { loadHosts, promoteHostEndpoint } from './host-store'
 import type { ConnectionState, HostProfile } from './types'
 
 type StoreEntry = {
@@ -156,10 +155,17 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
       let client: RpcClient
       try {
         client = connect(host.endpoint, host.deviceToken, host.publicKeyB64, {
-          // Why: retain reconnect lifecycle events for the Connection Log
-          // screen — without this the reasons a host is stuck live only in
-          // console.log, which users can't see or share.
-          onLog: (entry) => connectionLogStore.append(hostId, entry)
+          endpoints: host.endpoints,
+          onAuthenticatedEndpoint: (endpoint) => {
+            const current = primedHostsRef.current.get(hostId)
+            if (current) {
+              current.endpoint = endpoint
+              current.endpoints = Array.from(new Set([endpoint, ...(current.endpoints ?? [])]))
+            }
+            void promoteHostEndpoint(hostId, endpoint).catch((error) => {
+              console.warn('[net] failed to promote authenticated endpoint', { hostId, error })
+            })
+          }
         })
       } catch {
         // Why: connect() can throw synchronously if the public key is
@@ -343,7 +349,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return subscribeConnectionRevivalTriggers(() => {
       for (const entry of storeRef.current.values()) {
-        entry.client.notifyForeground()
+        entry.client.notifyConnectionMayBeAvailable()
       }
     })
   }, [])

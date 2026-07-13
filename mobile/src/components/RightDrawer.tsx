@@ -20,7 +20,8 @@ import Animated, {
   interpolate,
   Extrapolation
 } from 'react-native-reanimated'
-import { colors, spacing } from '../theme/mobile-theme'
+import { spacing } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 // Why: mount-before-commit logic is anchor-agnostic, so the X-axis drawer reuses
 // the exact same gate as BottomDrawer rather than duplicating it.
 import { resolveBottomDrawerMounted } from './bottom-drawer-mount-state'
@@ -91,21 +92,24 @@ function MountedRightDrawer({
   const insets = useSafeAreaInsets()
   const { isWideLayout } = useResponsiveLayout()
   const panelWidth = resolveRightDrawerPanelWidth(screenWidth, isWideLayout, widthPx)
+  const { colors, chrome, isEinkMode, motionEnabled } = useMobileTheme()
+  const showDuration = motionEnabled ? SHOW_DURATION : 0
+  const hideDuration = motionEnabled ? HIDE_DURATION : 0
 
   useEffect(() => {
     if (visible) {
       translateX.value = 0
       scrollOffsetY.value = 0
-      progress.value = withTiming(1, { duration: SHOW_DURATION })
+      progress.value = withTiming(1, { duration: showDuration })
     } else {
       Keyboard.dismiss()
-      progress.value = withTiming(0, { duration: HIDE_DURATION }, (finished) => {
+      progress.value = withTiming(0, { duration: hideDuration }, (finished) => {
         if (finished) {
           runOnJS(onHidden)()
         }
       })
     }
-  }, [onHidden, visible])
+  }, [hideDuration, onHidden, showDuration, visible])
 
   useEffect(() => {
     if (!visible) {
@@ -143,13 +147,17 @@ function MountedRightDrawer({
       if (e.translationX > DISMISS_THRESHOLD || e.velocityX > 500) {
         const velocity = Math.max(e.velocityX, 800)
         const remaining = panelWidth - e.translationX
-        const duration = Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+        const duration = motionEnabled
+          ? Math.min(Math.max((remaining / velocity) * 1000, 120), 300)
+          : 0
         translateX.value = withTiming(panelWidth, { duration })
         progress.value = withTiming(0, { duration }, () => {
           runOnJS(dismiss)()
         })
-      } else {
+      } else if (motionEnabled) {
         translateX.value = withSpring(0, SPRING_CONFIG)
+      } else {
+        translateX.value = 0
       }
     })
 
@@ -185,8 +193,12 @@ function MountedRightDrawer({
             <Animated.View
               style={[
                 styles.drawer,
+                chrome.noShadow,
                 {
                   width: panelWidth,
+                  backgroundColor: colors.bgBase,
+                  borderLeftColor: colors.borderSubtle,
+                  borderLeftWidth: isEinkMode ? 1 : StyleSheet.hairlineWidth,
                   paddingTop: insets.top + spacing.md,
                   paddingBottom: insets.bottom + spacing.lg,
                   paddingRight: insets.right
@@ -232,12 +244,9 @@ const styles = StyleSheet.create({
   },
   drawer: {
     height: '100%',
-    backgroundColor: colors.bgBase,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
     paddingHorizontal: spacing.md,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.borderSubtle,
     ...Platform.select({
       ios: {
         shadowColor: '#000',

@@ -1,12 +1,12 @@
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { ChevronRight, FileText, Minus, Plus, Trash2 } from 'lucide-react-native'
 import type { SectionListRenderItem } from 'react-native'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { MOBILE_GIT_STATUS_LABELS, type MobileSourceControlSection } from './mobile-git-status'
 import { formatMobileBranchEntryMeta } from './mobile-branch-entry-format'
 import { statusColor, type MobileGitStatusEntryView } from './mobile-source-control-screen-state'
 import type { MobileSourceControlState } from './use-mobile-source-control-state'
-import { styles } from './mobile-source-control-styles'
+import { useMobileSourceControlStyles } from './mobile-source-control-styles'
 
 type RowState = Pick<
   MobileSourceControlState,
@@ -27,6 +27,8 @@ export function makeRenderFileRow(
   const { busyAction, openingPath, openingBranchPath, openFile, runGitAction, setDiscardTarget } =
     state
   return function FileRow({ item }) {
+    const { colors } = useMobileTheme()
+    const styles = useMobileSourceControlStyles()
     const rowBusy =
       busyAction === item.stageActionId ||
       busyAction === item.unstageActionId ||
@@ -150,6 +152,8 @@ type FooterState = Pick<
 >
 
 export function BranchCompareFooter({ state }: { state: FooterState }) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileSourceControlStyles()
   const {
     shouldShowBranchCompareSection,
     branchCompareSummaryText,

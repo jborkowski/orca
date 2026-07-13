@@ -9,7 +9,10 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
 import { ChevronLeft, ChevronRight, Smartphone, Type } from 'lucide-react-native'
-import { colors, radii, spacing, typography } from '../src/theme/mobile-theme'
+import { spacing, typography } from '../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../src/theme/mobile-theme-context'
 import { loadHosts } from '../src/transport/host-store'
 import type { HostProfile } from '../src/transport/types'
 import { useAllHostClients } from '../src/transport/client-context'
@@ -96,12 +99,16 @@ function HostFitRow({
   client,
   hostName,
   ms,
-  onPress
+  onPress,
+  styles,
+  colors
 }: {
   client: RpcClient | null
   hostName: string
   ms: number | null | undefined
   onPress: () => void
+  styles: ReturnType<typeof createTerminalSettingsStyles>
+  colors: MobileThemeColors
 }): React.JSX.Element {
   return (
     <Pressable
@@ -122,6 +129,8 @@ function HostFitRow({
 export default function TerminalSettingsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome, isEinkMode } = useMobileTheme()
+  const styles = useMemo(() => createTerminalSettingsStyles(colors, chrome), [colors, chrome])
   const [hosts, setHosts] = useState<HostProfile[]>([])
   useEffect(() => {
     void loadHosts().then(setHosts)
@@ -298,6 +307,8 @@ export default function TerminalSettingsScreen() {
                     hostName={host.name}
                     ms={hostMs[host.id]}
                     onPress={() => setPickerHostId(host.id)}
+                    styles={styles}
+                    colors={colors}
                   />
                 </View>
               )
@@ -342,7 +353,10 @@ export default function TerminalSettingsScreen() {
             <Switch
               value={autocompleteEnabled}
               onValueChange={toggleAutocomplete}
-              trackColor={{ false: colors.bgRaised, true: colors.textSecondary }}
+              trackColor={{
+                false: isEinkMode ? colors.bgBase : colors.bgRaised,
+                true: colors.textSecondary
+              }}
               thumbColor={colors.textPrimary}
             />
           </View>
@@ -381,91 +395,91 @@ export default function TerminalSettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 0
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl
-  },
-  groupHeading: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.xs
-  },
-  groupDescription: {
-    fontSize: typography.bodySize - 1,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    paddingHorizontal: spacing.xs
-  },
-  section: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: radii.card,
-    overflow: 'hidden'
-  },
-  sectionTopGap: {
-    marginTop: spacing.sm
-  },
-  inputGroupGap: {
-    marginTop: spacing.xl
-  },
-  emptyText: {
-    fontSize: typography.bodySize,
-    color: colors.textSecondary,
-    padding: spacing.md
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md + 2
-  },
-  rowPressed: {
-    backgroundColor: colors.bgRaised
-  },
-  rowContent: {
-    flex: 1
-  },
-  rowLabel: {
-    fontSize: typography.bodySize,
-    fontWeight: '500',
-    color: colors.textPrimary
-  },
-  rowSublabel: {
-    fontSize: typography.bodySize - 2,
-    color: colors.textSecondary,
-    marginTop: 2
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-    marginHorizontal: spacing.md
-  }
-})
+function createTerminalSettingsStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgBase,
+      paddingHorizontal: spacing.lg,
+      paddingTop: 0
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      marginBottom: spacing.lg
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.sm
+    },
+    heading: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    scrollContent: {
+      paddingBottom: spacing.xl
+    },
+    groupHeading: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textMuted,
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+      paddingHorizontal: spacing.xs
+    },
+    groupDescription: {
+      fontSize: typography.bodySize - 1,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      paddingHorizontal: spacing.xs
+    },
+    section: {
+      ...chrome.sectionCard
+    },
+    sectionTopGap: {
+      marginTop: spacing.sm
+    },
+    inputGroupGap: {
+      marginTop: spacing.xl
+    },
+    emptyText: {
+      fontSize: typography.bodySize,
+      color: colors.textSecondary,
+      padding: spacing.md
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm + 2,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md + 2
+    },
+    rowPressed: {
+      ...chrome.listRowPressed
+    },
+    rowContent: {
+      flex: 1
+    },
+    rowLabel: {
+      fontSize: typography.bodySize,
+      fontWeight: '500',
+      color: colors.textPrimary
+    },
+    rowSublabel: {
+      fontSize: typography.bodySize - 2,
+      color: colors.textSecondary,
+      marginTop: 2
+    },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderSubtle,
+      marginHorizontal: spacing.md
+    }
+  })
+}

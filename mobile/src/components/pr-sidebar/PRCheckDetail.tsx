@@ -1,8 +1,9 @@
+import { useMemo } from 'react'
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native'
-import { colors } from '../../theme/mobile-theme'
 import type { PRCheckRunDetails } from '../../../../src/shared/types'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import { presentCheckDetail, type CheckDetailJob } from './pr-check-detail-content'
-import { mobilePrSidebarStyles as styles } from './mobile-pr-sidebar-styles'
+import { createMobilePrSidebarStyles } from './mobile-pr-sidebar-styles'
 
 // Per-check lazily-fetched detail. `loading`/`error` track the in-flight fetch;
 // `details` (once set) is the cache so collapse/re-expand never re-fetches.
@@ -11,11 +12,16 @@ export type DetailEntry =
   | { status: 'error'; message: string }
   | { status: 'loaded'; details: PRCheckRunDetails | null }
 
+type SidebarStyles = ReturnType<typeof createMobilePrSidebarStyles>
+
 // Renders the expanded detail for one check: conclusion/title/summary, plus the
 // annotations and failed-job/step summary from the github.prCheckDetails payload
 // (parity with the desktop ChecksPanel detail). Muted/monochrome and scrollable
 // so long CI output never breaks the sidebar layout.
 export function PRCheckDetailView({ entry }: { entry: DetailEntry | undefined }) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+
   if (!entry || entry.status === 'loading') {
     return (
       <View style={styles.checkDetailArea}>
@@ -79,7 +85,7 @@ export function PRCheckDetailView({ entry }: { entry: DetailEntry | undefined })
             <View style={styles.checkDetailGroup}>
               <Text style={styles.checkDetailGroupLabel}>{content.jobsLabel}</Text>
               {content.jobs.map((job, index) => (
-                <JobRow key={index} job={job} />
+                <JobRow key={index} job={job} styles={styles} />
               ))}
               {content.jobsTruncated ? (
                 <Text style={styles.checkDetailText}>Showing first 100 jobs</Text>
@@ -92,7 +98,7 @@ export function PRCheckDetailView({ entry }: { entry: DetailEntry | undefined })
   )
 }
 
-function JobRow({ job }: { job: CheckDetailJob }) {
+function JobRow({ job, styles }: { job: CheckDetailJob; styles: SidebarStyles }) {
   return (
     <View>
       <View style={styles.checkDetailStepRow}>

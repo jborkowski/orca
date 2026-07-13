@@ -358,6 +358,7 @@ describe('OrcaRuntimeRpcServer', () => {
       expect(offer.endpoint).toContain('100.64.1.20')
       const parsed = parsePairingCode(offer.pairingUrl)
       expect(parsed?.endpoint).toBe(offer.endpoint)
+      expect(parsed?.endpoints).toEqual([offer.endpoint])
       expect(parsed?.deviceToken).toBeTruthy()
       expect(parsed?.publicKeyB64).toBeTruthy()
       expect(parsed?.scope).toBe('runtime')
@@ -365,6 +366,35 @@ describe('OrcaRuntimeRpcServer', () => {
     }
 
     await server.stop()
+  })
+
+  it('orders the selected pairing endpoint before fallback candidates', async () => {
+    const userDataPath = mkdtempSync(join(tmpdir(), 'orca-runtime-rpc-'))
+    const runtime = new OrcaRuntimeService()
+    const server = new OrcaRuntimeRpcServer({
+      runtime,
+      userDataPath,
+      enableWebSocket: true,
+      wsPort: 0
+    })
+    await server.start()
+
+    try {
+      const offer = server.createPairingOffer({
+        address: '100.64.1.20',
+        addresses: ['100.64.1.20', '192.168.1.24', '100.64.1.20']
+      })
+      expect(offer.available).toBe(true)
+      if (offer.available) {
+        const parsed = parsePairingCode(offer.pairingUrl)
+        expect(parsed?.endpoints).toEqual([
+          offer.endpoint,
+          offer.endpoint.replace('100.64.1.20', '192.168.1.24')
+        ])
+      }
+    } finally {
+      await server.stop()
+    }
   })
 
   it('includes a web client URL when the web bundle is served by the runtime', async () => {

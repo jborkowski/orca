@@ -1,9 +1,12 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { AppState, Linking, View, Text, StyleSheet, Pressable, Switch } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { ChevronLeft } from 'lucide-react-native'
-import { colors, spacing, typography } from '../src/theme/mobile-theme'
+import { spacing, typography } from '../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../src/theme/mobile-theme-context'
 import {
   loadPushNotificationsEnabled,
   savePushNotificationsEnabled
@@ -23,6 +26,8 @@ const DEFAULT_PERMISSION_STATE: NotificationPermissionState = {
 export default function NotificationsScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome, isEinkMode } = useMobileTheme()
+  const styles = useMemo(() => createNotificationsStyles(colors, chrome), [colors, chrome])
   const [pushEnabled, setPushEnabled] = useState(false)
   const [permissionState, setPermissionState] = useState(DEFAULT_PERMISSION_STATE)
 
@@ -87,7 +92,10 @@ export default function NotificationsScreen() {
             value={switchEnabled}
             disabled={notificationsBlocked}
             onValueChange={(v) => void togglePush(v)}
-            trackColor={{ false: colors.bgRaised, true: colors.textSecondary }}
+            trackColor={{
+              false: isEinkMode ? colors.bgBase : colors.bgRaised,
+              true: colors.textSecondary
+            }}
             thumbColor={colors.textPrimary}
           />
         </View>
@@ -108,70 +116,69 @@ export default function NotificationsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase,
-    padding: spacing.lg
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xl
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  section: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: 12,
-    overflow: 'hidden'
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md + 2
-  },
-  rowLabel: {
-    flex: 1,
-    fontSize: typography.bodySize,
-    fontWeight: '500',
-    color: colors.textPrimary
-  },
-  hint: {
-    fontSize: typography.metaSize,
-    color: colors.textMuted,
-    lineHeight: 18,
-    paddingHorizontal: spacing.md + 2,
-    paddingBottom: spacing.md
-  },
-  settingsButton: {
-    alignSelf: 'flex-start',
-    marginHorizontal: spacing.md + 2,
-    marginBottom: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 8,
-    backgroundColor: colors.bgRaised
-  },
-  settingsButtonPressed: {
-    opacity: 0.6
-  },
-  settingsButtonText: {
-    color: colors.textPrimary,
-    fontSize: typography.metaSize,
-    fontWeight: '600'
-  }
-})
+function createNotificationsStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgBase,
+      padding: spacing.lg
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xl
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.sm
+    },
+    heading: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    section: {
+      ...chrome.sectionCard
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm + 2,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md + 2
+    },
+    rowLabel: {
+      flex: 1,
+      fontSize: typography.bodySize,
+      fontWeight: '500',
+      color: colors.textPrimary
+    },
+    hint: {
+      fontSize: typography.metaSize,
+      color: colors.textMuted,
+      lineHeight: 18,
+      paddingHorizontal: spacing.md + 2,
+      paddingBottom: spacing.md
+    },
+    settingsButton: {
+      ...chrome.outlineButton,
+      alignSelf: 'flex-start',
+      marginHorizontal: spacing.md + 2,
+      marginBottom: spacing.md,
+      borderRadius: 8
+    },
+    settingsButtonPressed: {
+      ...chrome.listRowPressed,
+      borderRadius: 8
+    },
+    settingsButtonText: {
+      color: colors.textPrimary,
+      fontSize: typography.metaSize,
+      fontWeight: '600'
+    }
+  })
+}

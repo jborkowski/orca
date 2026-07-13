@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight } from 'lucide-react-native'
-import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
+import { radii, spacing, typography } from '../../theme/mobile-theme'
+import type { MobileEinkChrome } from '../../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import { MermaidDiagram } from './MermaidDiagram'
 import { isAllowedMarkdownLinkUrl } from './markdown-link-scheme'
 import {
@@ -18,11 +21,15 @@ type Props = {
   variant?: 'document' | 'comment'
 }
 
+type MarkdownStyles = ReturnType<typeof createCommentMarkdownStyles>
+
 // Themed, dependency-free markdown for PR bodies + comments — the RN analogue of
 // the desktop CommentMarkdown. The previous third-party renderer hung the JS thread
 // on mount; this renders a small block model and falls back to plain text on any
 // parse error, so it can never crash the comment list.
 export function CommentMarkdown({ content, variant = 'comment' }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createCommentMarkdownStyles(colors, chrome), [colors, chrome])
   const base = variant === 'document' ? typography.bodySize : 13
   const blocks = useMemo<MarkdownBlock[] | null>(() => {
     try {
@@ -41,7 +48,7 @@ export function CommentMarkdown({ content, variant = 'comment' }: Props) {
   return (
     <View>
       {blocks.map((block, index) => (
-        <BlockView key={index} block={block} base={base} />
+        <BlockView key={index} block={block} base={base} styles={styles} colors={colors} />
       ))}
     </View>
   )
@@ -50,11 +57,15 @@ export function CommentMarkdown({ content, variant = 'comment' }: Props) {
 function DetailsBlock({
   summary,
   body,
-  base
+  base,
+  styles,
+  colors
 }: {
   summary: string
   body: MarkdownBlock[]
   base: number
+  styles: MarkdownStyles
+  colors: MobileThemeColors
 }) {
   const [open, setOpen] = useState(false)
   const Chevron = open ? ChevronDown : ChevronRight
@@ -71,7 +82,7 @@ function DetailsBlock({
       {open ? (
         <View style={styles.detailsBody}>
           {body.map((b, i) => (
-            <BlockView key={i} block={b} base={base} />
+            <BlockView key={i} block={b} base={base} styles={styles} colors={colors} />
           ))}
         </View>
       ) : null}
@@ -79,14 +90,32 @@ function DetailsBlock({
   )
 }
 
-function BlockView({ block, base }: { block: MarkdownBlock; base: number }) {
+function BlockView({
+  block,
+  base,
+  styles,
+  colors
+}: {
+  block: MarkdownBlock
+  base: number
+  styles: MarkdownStyles
+  colors: MobileThemeColors
+}) {
   switch (block.kind) {
     case 'details':
-      return <DetailsBlock summary={block.summary} body={block.body} base={base} />
+      return (
+        <DetailsBlock
+          summary={block.summary}
+          body={block.body}
+          base={base}
+          styles={styles}
+          colors={colors}
+        />
+      )
     case 'heading':
       return (
         <Text style={[styles.heading, { fontSize: base + Math.max(0, 4 - block.level) }]}>
-          <Inline text={block.text} base={base} />
+          <Inline text={block.text} base={base} styles={styles} />
         </Text>
       )
     case 'code':
@@ -100,12 +129,12 @@ function BlockView({ block, base }: { block: MarkdownBlock; base: number }) {
         </View>
       )
     case 'table':
-      return <TableBlock block={block} base={base} />
+      return <TableBlock block={block} base={base} styles={styles} />
     case 'quote':
       return (
         <View style={styles.quote}>
           <Text style={[styles.paragraph, { fontSize: base, lineHeight: base + 7 }]}>
-            <Inline text={block.text} base={base} />
+            <Inline text={block.text} base={base} styles={styles} />
           </Text>
         </View>
       )
@@ -126,7 +155,7 @@ function BlockView({ block, base }: { block: MarkdownBlock; base: number }) {
                   { fontSize: base, lineHeight: base + 7 }
                 ]}
               >
-                <Inline text={item} base={base} />
+                <Inline text={item} base={base} styles={styles} />
               </Text>
             </View>
           ))}
@@ -135,7 +164,7 @@ function BlockView({ block, base }: { block: MarkdownBlock; base: number }) {
     case 'paragraph':
       return (
         <Text style={[styles.paragraph, { fontSize: base, lineHeight: base + 7 }]}>
-          <Inline text={block.text} base={base} />
+          <Inline text={block.text} base={base} styles={styles} />
         </Text>
       )
   }
@@ -162,10 +191,12 @@ function alignToFlex(align: CellAlign | undefined): 'flex-start' | 'center' | 'f
 // breaking the sidebar layout; fixed-width columns give cells room to sit side by side.
 function TableBlock({
   block,
-  base
+  base,
+  styles
 }: {
   block: Extract<MarkdownBlock, { kind: 'table' }>
   base: number
+  styles: MarkdownStyles
 }) {
   const columnCount = Math.max(block.headers.length, ...block.rows.map((r) => r.length), 1)
   const columns = Array.from({ length: columnCount }, (_, c) => c)
@@ -181,7 +212,7 @@ function TableBlock({
           {columns.map((c) => (
             <View key={c} style={[styles.tableCell, { alignItems: alignToFlex(block.align[c]) }]}>
               <Text style={[styles.tableHeaderText, { fontSize: base - 1 }]}>
-                <Inline text={block.headers[c] ?? ''} base={base} />
+                <Inline text={block.headers[c] ?? ''} base={base} styles={styles} />
               </Text>
             </View>
           ))}
@@ -191,7 +222,7 @@ function TableBlock({
             {columns.map((c) => (
               <View key={c} style={[styles.tableCell, { alignItems: alignToFlex(block.align[c]) }]}>
                 <Text style={[styles.tableCellText, { fontSize: base - 1 }]}>
-                  <Inline text={row[c] ?? ''} base={base} />
+                  <Inline text={row[c] ?? ''} base={base} styles={styles} />
                 </Text>
               </View>
             ))}
@@ -202,7 +233,15 @@ function TableBlock({
   )
 }
 
-function Inline({ text, base }: { text: string; base: number }) {
+function Inline({
+  text,
+  base,
+  styles
+}: {
+  text: string
+  base: number
+  styles: MarkdownStyles
+}) {
   const tokens = useMemo<InlineToken[]>(() => {
     try {
       return parseInline(text)
@@ -247,76 +286,79 @@ function Inline({ text, base }: { text: string; base: number }) {
   )
 }
 
-const styles = StyleSheet.create({
-  paragraph: { color: colors.textPrimary, marginBottom: spacing.sm },
-  heading: { color: colors.textPrimary, fontWeight: '700', marginBottom: spacing.xs },
-  bold: { fontWeight: '700' },
-  italic: { fontStyle: 'italic' },
-  link: { color: colors.textPrimary, textDecorationLine: 'underline' },
-  codeInline: {
-    color: colors.textPrimary,
-    fontFamily: typography.monoFamily,
-    backgroundColor: colors.bgRaised
-  },
-  codeBlock: {
-    backgroundColor: colors.bgRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.row,
-    padding: spacing.sm,
-    marginBottom: spacing.sm
-  },
-  codeText: { color: colors.textPrimary, fontFamily: typography.monoFamily },
-  quote: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.borderSubtle,
-    backgroundColor: colors.bgRaised,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.sm
-  },
-  hr: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: spacing.sm },
-  list: { marginBottom: spacing.sm },
-  listItem: { flexDirection: 'row', gap: spacing.xs },
-  listItemText: { flex: 1, marginBottom: 2 },
-  bullet: { color: colors.textSecondary },
-  details: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.row,
-    marginBottom: spacing.sm,
-    overflow: 'hidden'
-  },
-  detailsSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.bgRaised
-  },
-  detailsSummaryText: { color: colors.textPrimary, fontWeight: '600', flexShrink: 1 },
-  detailsBody: { paddingHorizontal: spacing.sm, paddingTop: spacing.xs },
-  tableScroll: { marginBottom: spacing.sm },
-  table: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.row,
-    overflow: 'hidden'
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle
-  },
-  tableHeaderRow: { borderTopWidth: 0, backgroundColor: colors.bgRaised },
-  tableCell: {
-    minWidth: 96,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.borderSubtle
-  },
-  tableHeaderText: { color: colors.textPrimary, fontWeight: '700' },
-  tableCellText: { color: colors.textPrimary }
-})
+function createCommentMarkdownStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    paragraph: { color: colors.textPrimary, marginBottom: spacing.sm },
+    heading: { color: colors.textPrimary, fontWeight: '700', marginBottom: spacing.xs },
+    bold: { fontWeight: '700' },
+    italic: { fontStyle: 'italic' },
+    link: { color: colors.textPrimary, textDecorationLine: 'underline' },
+    codeInline: {
+      color: colors.textPrimary,
+      fontFamily: typography.monoFamily,
+      backgroundColor: chrome.listRowPressed.backgroundColor
+    },
+    codeBlock: {
+      ...chrome.listRowPressed,
+      borderRadius: radii.row,
+      padding: spacing.sm,
+      marginBottom: spacing.sm
+    },
+    codeText: { color: colors.textPrimary, fontFamily: typography.monoFamily },
+    quote: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.borderSubtle,
+      backgroundColor: chrome.listRowPressed.backgroundColor,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      marginBottom: spacing.sm
+    },
+    hr: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: spacing.sm },
+    list: { marginBottom: spacing.sm },
+    listItem: { flexDirection: 'row', gap: spacing.xs },
+    listItemText: { flex: 1, marginBottom: 2 },
+    bullet: { color: colors.textSecondary },
+    details: {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+      borderRadius: radii.row,
+      marginBottom: spacing.sm,
+      overflow: 'hidden'
+    },
+    detailsSummary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      ...chrome.listRowPressed
+    },
+    detailsSummaryText: { color: colors.textPrimary, fontWeight: '600', flexShrink: 1 },
+    detailsBody: { paddingHorizontal: spacing.sm, paddingTop: spacing.xs },
+    tableScroll: { marginBottom: spacing.sm },
+    table: {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle,
+      borderRadius: radii.row,
+      overflow: 'hidden'
+    },
+    tableRow: {
+      flexDirection: 'row',
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderSubtle
+    },
+    tableHeaderRow: {
+      borderTopWidth: 0,
+      backgroundColor: chrome.listRowPressed.backgroundColor
+    },
+    tableCell: {
+      minWidth: 96,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderLeftColor: colors.borderSubtle
+    },
+    tableHeaderText: { color: colors.textPrimary, fontWeight: '700' },
+    tableCellText: { color: colors.textPrimary }
+  })
+}

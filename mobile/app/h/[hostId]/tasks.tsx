@@ -94,7 +94,10 @@ import {
   trustedOrcaHooksWithSetupApproval,
   wasSetupHookPreviouslyApproved
 } from '../../../src/tasks/setup-hook-trust'
-import { colors, radii, spacing, typography } from '../../../src/theme/mobile-theme'
+import { radii, spacing, typography } from '../../../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../../../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../../../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../../../src/theme/mobile-theme-context'
 import { triggerMediumImpact } from '../../../src/platform/haptics'
 import type {
   GitHubProjectSortDirection,
@@ -698,7 +701,8 @@ type TaskListEntry =
   | { type: 'section'; key: string; label: string; color: string }
   | { type: 'item'; key: string; item: TaskItem }
 
-const PROVIDER_OPTIONS: PickerOption<TaskProvider>[] = [
+function createProviderOptions(colors: MobileThemeColors): PickerOption<TaskProvider>[] {
+  return [
   {
     value: 'github',
     label: 'GitHub',
@@ -735,7 +739,8 @@ const PROVIDER_OPTIONS: PickerOption<TaskProvider>[] = [
       />
     )
   }
-]
+  ]
+}
 
 const GITLAB_FILTER_OPTIONS: PickerOption<GitLabFilter>[] = [
   { value: 'opened', label: 'Open', subtitle: 'Open issues and merge requests' },
@@ -1025,7 +1030,10 @@ const GITHUB_PROJECT_OPTION_COLORS: Record<string, string> = {
   PINK: '#db61a2'
 }
 
-function githubProjectOptionColor(color: string | null | undefined): string {
+function githubProjectOptionColor(
+  colors: MobileThemeColors,
+  color: string | null | undefined
+): string {
   if (!color) {
     return colors.textMuted
   }
@@ -1560,6 +1568,7 @@ function compareLinearIssues(a: LinearIssue, b: LinearIssue, orderBy: LinearOrde
 }
 
 function getLinearIssueGroup(
+  colors: MobileThemeColors,
   issue: LinearIssue,
   groupBy: LinearGroupBy
 ): {
@@ -1591,6 +1600,7 @@ function getLinearIssueGroup(
 }
 
 function groupLinearIssues(
+  colors: MobileThemeColors,
   issues: LinearIssue[],
   groupBy: LinearGroupBy,
   orderBy: LinearOrderBy
@@ -1604,7 +1614,7 @@ function groupLinearIssues(
     { key: string; label: string; color: string; issues: LinearIssue[] }
   >()
   for (const issue of sorted) {
-    const group = getLinearIssueGroup(issue, groupBy)
+    const group = getLinearIssueGroup(colors, issue, groupBy)
     const section = sections.get(group.key)
     if (section) {
       section.issues.push(issue)
@@ -1978,7 +1988,10 @@ function discussionSummary(count: number): string {
   return `${count} ${count === 1 ? 'comment' : 'comments'}`
 }
 
-function renderCommentReactions(comment: DetailComment): ReactNode {
+function renderCommentReactions(
+  styles: ReturnType<typeof createTasksScreenStyles>,
+  comment: DetailComment
+): ReactNode {
   const reactions = (comment.reactions ?? []).filter((reaction) => reaction.count > 0)
   if (reactions.length === 0) {
     return null
@@ -2011,6 +2024,8 @@ function diffLinePrefix(kind: GitHubPrFileDiffLine['kind']): string {
 }
 
 function GitHubPrFileDiff({
+  styles,
+  colors,
   filePath,
   contents,
   commentDrafts,
@@ -2018,6 +2033,8 @@ function GitHubPrFileDiff({
   onCommentDraftChange,
   onSubmitComment
 }: {
+  styles: ReturnType<typeof createTasksScreenStyles>
+  colors: MobileThemeColors
   filePath: string
   contents: GitHubPRFileContents
   commentDrafts: Record<string, string>
@@ -2150,6 +2167,7 @@ function setupSourceLabel(source: string | null): string {
 }
 
 function taskRepositoryMeta(
+  colors: MobileThemeColors,
   item: TaskItem,
   reposById: Map<string, RepoSummary>
 ): { key: string; label: string; color: string } {
@@ -2180,12 +2198,13 @@ function compareTasksByUpdated(a: TaskItem, b: TaskItem): number {
 }
 
 function compareTasksByRepository(
+  colors: MobileThemeColors,
   a: TaskItem,
   b: TaskItem,
   reposById: Map<string, RepoSummary>
 ): number {
-  const aRepo = taskRepositoryMeta(a, reposById)
-  const bRepo = taskRepositoryMeta(b, reposById)
+  const aRepo = taskRepositoryMeta(colors, a, reposById)
+  const bRepo = taskRepositoryMeta(colors, b, reposById)
   const repoComparison = aRepo.label.localeCompare(bRepo.label, undefined, { sensitivity: 'base' })
   return repoComparison || compareTasksByUpdated(a, b)
 }
@@ -2194,6 +2213,8 @@ export default function MobileTasksScreen() {
   const { hostId, taskSource } = useLocalSearchParams<{ hostId: string; taskSource?: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createTasksScreenStyles(colors, chrome), [colors, chrome])
   const { client, state: connState } = useHostClient(hostId)
   const reconnectAttempts = useReconnectAttempt(hostId)
   const lastConnectedAt = useLastConnectedAt(hostId)
@@ -8195,7 +8216,7 @@ export default function MobileTasksScreen() {
         {commentDate(comment.createdAt) ? ` · ${commentDate(comment.createdAt)}` : ''}
       </Text>
       <MobileMarkdown content={comment.body} />
-      {renderCommentReactions(comment)}
+      {renderCommentReactions(styles, comment)}
       {SHOW_MOBILE_COMMENT_THREAD_TOOLS &&
       actionItem?.provider === 'github' &&
       detailPayload?.provider === 'github' ? (
@@ -8319,8 +8340,9 @@ export default function MobileTasksScreen() {
   const showHeaderCreateTask =
     provider === 'linear' || (provider === 'github' && githubMode === 'items')
   const providerOptions = useMemo(
-    () => PROVIDER_OPTIONS.filter((option) => visibleProviders.includes(option.value)),
-    [visibleProviders]
+    () =>
+      createProviderOptions(colors).filter((option) => visibleProviders.includes(option.value)),
+    [colors, visibleProviders]
   )
   const selectedCreateRepo =
     provider === 'github' || provider === 'gitlab'
@@ -8380,12 +8402,12 @@ export default function MobileTasksScreen() {
   const sortedItems = useMemo(() => {
     const next = [...items]
     if (taskSort === 'repository') {
-      next.sort((a, b) => compareTasksByRepository(a, b, reposById))
+      next.sort((a, b) => compareTasksByRepository(colors, a, b, reposById))
     } else {
       next.sort(compareTasksByUpdated)
     }
     return next
-  }, [items, reposById, taskSort])
+  }, [colors, items, reposById, taskSort])
   const displayedEntries = useMemo<TaskListEntry[]>(() => {
     if (taskSort !== 'repository') {
       return sortedItems.map((item) => ({ type: 'item', key: item.key, item }))
@@ -8393,7 +8415,7 @@ export default function MobileTasksScreen() {
     const entries: TaskListEntry[] = []
     let previousRepoKey = ''
     for (const item of sortedItems) {
-      const repo = taskRepositoryMeta(item, reposById)
+      const repo = taskRepositoryMeta(colors, item, reposById)
       if (repo.key !== previousRepoKey) {
         entries.push({
           type: 'section',
@@ -8406,7 +8428,7 @@ export default function MobileTasksScreen() {
       entries.push({ type: 'item', key: item.key, item })
     }
     return entries
-  }, [reposById, sortedItems, taskSort])
+  }, [colors, reposById, sortedItems, taskSort])
   const sortLabel = SORT_OPTIONS.find((option) => option.value === taskSort)?.label ?? 'Updated'
   const githubProjectFields = githubProjectTable?.selectedView.fields ?? []
   const githubProjectViewSort = githubProjectTable?.selectedView.sortByFields?.[0] ?? null
@@ -8540,8 +8562,8 @@ export default function MobileTasksScreen() {
     [items, linearOrderBy]
   )
   const linearIssueSections = useMemo(
-    () => groupLinearIssues(linearIssuesForView, linearGroupBy, linearOrderBy),
-    [linearGroupBy, linearIssuesForView, linearOrderBy]
+    () => groupLinearIssues(colors, linearIssuesForView, linearGroupBy, linearOrderBy),
+    [colors, linearGroupBy, linearIssuesForView, linearOrderBy]
   )
   // Why: FlatList treats data identity as meaningful; unrelated renders should
   // not rebuild the section/item wrapper array.
@@ -8560,11 +8582,12 @@ export default function MobileTasksScreen() {
   const linearBoardSections = useMemo(
     () =>
       groupLinearIssues(
+        colors,
         linearIssuesForView,
         linearGroupBy === 'none' ? 'status' : linearGroupBy,
         linearOrderBy
       ),
-    [linearGroupBy, linearIssuesForView, linearOrderBy]
+    [colors, linearGroupBy, linearIssuesForView, linearOrderBy]
   )
   const githubModeLabel =
     githubMode === 'project' ? 'Projects' : githubKind === 'prs' ? 'PRs' : 'Issues'
@@ -9669,7 +9692,7 @@ export default function MobileTasksScreen() {
               )
             }
             const item = entry.item
-            const repo = taskRepositoryMeta(item, reposById)
+            const repo = taskRepositoryMeta(colors, item, reposById)
             const isGitHubPr = item.provider === 'github' && item.source.type === 'pr'
             const githubPrDelta = isGitHubPr ? formatGitHubPRDelta(item.source) : null
             const branchSummary = hostedBranchSummary(item)
@@ -9728,7 +9751,7 @@ export default function MobileTasksScreen() {
                       <View
                         style={[
                           styles.prSignalChip,
-                          getPrSignalToneStyle(getGitHubPRSignalTone(item.source, 'review'))
+                          getPrSignalToneStyle(styles, getGitHubPRSignalTone(item.source, 'review'))
                         ]}
                       >
                         <Text style={styles.prSignalText} numberOfLines={1}>
@@ -9738,7 +9761,7 @@ export default function MobileTasksScreen() {
                       <View
                         style={[
                           styles.prSignalChip,
-                          getPrSignalToneStyle(getGitHubPRSignalTone(item.source, 'checks'))
+                          getPrSignalToneStyle(styles, getGitHubPRSignalTone(item.source, 'checks'))
                         ]}
                       >
                         <Text style={styles.prSignalText} numberOfLines={1}>
@@ -9748,7 +9771,7 @@ export default function MobileTasksScreen() {
                       <View
                         style={[
                           styles.prSignalChip,
-                          getPrSignalToneStyle(getGitHubPRSignalTone(item.source, 'merge'))
+                          getPrSignalToneStyle(styles, getGitHubPRSignalTone(item.source, 'merge'))
                         ]}
                       >
                         <Text style={styles.prSignalText} numberOfLines={1}>
@@ -11719,7 +11742,7 @@ export default function MobileTasksScreen() {
                               <View
                                 style={[
                                   styles.issueTypeDot,
-                                  { backgroundColor: githubProjectOptionColor(issueType.color) }
+                                  { backgroundColor: githubProjectOptionColor(colors, issueType.color) }
                                 ]}
                               />
                               <Text style={styles.detailChipText}>{issueType.name}</Text>
@@ -12301,6 +12324,8 @@ export default function MobileTasksScreen() {
                                     <Text style={styles.detailMuted}>Binary file.</Text>
                                   ) : prFileContents[file.path] ? (
                                     <GitHubPrFileDiff
+                                      styles={styles}
+                                      colors={colors}
                                       filePath={file.path}
                                       contents={prFileContents[file.path]}
                                       commentDrafts={prFileCommentDrafts}
@@ -12439,7 +12464,7 @@ export default function MobileTasksScreen() {
                                 ) : (
                                   <>
                                     <MobileMarkdown content={comment.body} />
-                                    {renderCommentReactions(comment)}
+                                    {renderCommentReactions(styles, comment)}
                                     {SHOW_MOBILE_COMMENT_THREAD_TOOLS ? (
                                       <View style={styles.inlineActionRow}>
                                         {projectRowType(projectRowItem) === 'pr' &&
@@ -13247,6 +13272,8 @@ export default function MobileTasksScreen() {
                                   <Text style={styles.detailMuted}>Binary file.</Text>
                                 ) : prFileContents[file.path] ? (
                                   <GitHubPrFileDiff
+                                    styles={styles}
+                                    colors={colors}
                                     filePath={file.path}
                                     contents={prFileContents[file.path]}
                                     commentDrafts={prFileCommentDrafts}
@@ -13316,7 +13343,7 @@ export default function MobileTasksScreen() {
                                 <View
                                   style={[
                                     styles.pipelineStatusChip,
-                                    getGitLabPipelineStatusStyle(job.status)
+                                    getGitLabPipelineStatusStyle(styles, job.status)
                                   ]}
                                 >
                                   <Text style={styles.pipelineStatusText}>{job.status}</Text>
@@ -13721,7 +13748,8 @@ export default function MobileTasksScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+function createTasksScreenStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgBase
@@ -13741,8 +13769,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...chrome.toolbarIconButton,
     marginRight: spacing.xs
   },
   titleWrap: {
@@ -13759,8 +13786,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center'
+    ...chrome.toolbarIconButton
   },
   toolbar: {
     flexDirection: 'row',
@@ -13777,29 +13803,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.button,
+    ...chrome.outlineButton,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs
   },
   segmentIconButton: {
     width: 32,
     height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.button
+    ...chrome.toolbarIconButton
   },
   segmentCountPill: {
     minWidth: 32,
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.button,
+    ...chrome.outlineButton,
     paddingHorizontal: spacing.sm
   },
   segmentRepoDot: {
@@ -13862,11 +13880,7 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   sourceErrorRetry: {
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.button,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
+    ...chrome.reconnectButton
   },
   sourceErrorRetryText: {
     color: colors.textPrimary,
@@ -13944,7 +13958,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2
   },
   taskRowPressed: {
-    backgroundColor: colors.bgRaised
+    ...chrome.listRowPressed
   },
   taskIcon: {
     width: 20,
@@ -14103,10 +14117,7 @@ const styles = StyleSheet.create({
     minHeight: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.button,
-    backgroundColor: colors.bgRaised,
+    ...chrome.outlineButton,
     paddingVertical: spacing.sm
   },
   paginationButtonDisabled: {
@@ -14131,10 +14142,7 @@ const styles = StyleSheet.create({
   boardColumn: {
     width: 280,
     maxHeight: '100%',
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.card,
-    backgroundColor: colors.bgPanel,
+    ...chrome.sectionCard,
     overflow: 'hidden'
   },
   boardHeader: {
@@ -14166,14 +14174,11 @@ const styles = StyleSheet.create({
     padding: spacing.md
   },
   repoPickerGroup: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: 12,
-    overflow: 'hidden'
+    ...chrome.sectionCard
   },
   pagePickerList: {
     maxHeight: 420,
-    backgroundColor: colors.bgPanel,
-    borderRadius: 12
+    ...chrome.sectionCard
   },
   projectPickerControls: {
     gap: spacing.sm,
@@ -14287,7 +14292,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSubtle
   },
   pickerRowSelected: {
-    backgroundColor: colors.bgRaised
+    ...chrome.listRowActive
   },
   pickerRowContent: {
     flex: 1,
@@ -14907,9 +14912,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel,
+    ...chrome.primaryButton,
     borderRadius: radii.input,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2
@@ -15090,8 +15093,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginTop: spacing.sm,
-    backgroundColor: colors.textPrimary,
-    borderRadius: radii.button,
+    ...chrome.primaryButton,
     paddingVertical: spacing.sm + 2,
     alignItems: 'center'
   },
@@ -15103,39 +15105,44 @@ const styles = StyleSheet.create({
     fontSize: typography.bodySize,
     fontWeight: '700'
   }
-})
-
-function getPrSignalToneStyle(tone: 'neutral' | 'success' | 'warning' | 'danger') {
-  if (tone === 'success') {
-    return styles.prSignalSuccess
-  }
-  if (tone === 'warning') {
-    return styles.prSignalWarning
-  }
-  if (tone === 'danger') {
-    return styles.prSignalDanger
-  }
-  return null
+  })
 }
 
-function getGitLabPipelineStatusStyle(status: string) {
-  switch (status) {
-    case 'success':
-      return styles.pipelineStatusSuccess
-    case 'failed':
-      return styles.pipelineStatusDanger
-    case 'manual':
-      return styles.pipelineStatusWarning
-    case 'running':
-    case 'pending':
-    case 'created':
-    case 'preparing':
-    case 'waiting_for_resource':
-    case 'scheduled':
-      return styles.pipelineStatusActive
-    case 'canceled':
-    case 'skipped':
-    default:
-      return null
+function getPrSignalToneStyle(
+  styles: ReturnType<typeof createTasksScreenStyles>,
+  tone: 'neutral' | 'success' | 'warning' | 'danger'
+) {
+  return tone === 'success'
+    ? styles.prSignalSuccess
+    : tone === 'warning'
+      ? styles.prSignalWarning
+      : tone === 'danger'
+        ? styles.prSignalDanger
+        : null
+}
+
+function getGitLabPipelineStatusStyle(
+  styles: ReturnType<typeof createTasksScreenStyles>,
+  status: string
+) {
+  if (status === 'success') {
+    return styles.pipelineStatusSuccess
   }
+  if (status === 'failed') {
+    return styles.pipelineStatusDanger
+  }
+  if (status === 'manual') {
+    return styles.pipelineStatusWarning
+  }
+  if (
+    status === 'running' ||
+    status === 'pending' ||
+    status === 'created' ||
+    status === 'preparing' ||
+    status === 'waiting_for_resource' ||
+    status === 'scheduled'
+  ) {
+    return styles.pipelineStatusActive
+  }
+  return null
 }

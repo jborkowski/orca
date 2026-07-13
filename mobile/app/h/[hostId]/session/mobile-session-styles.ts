@@ -1,11 +1,16 @@
-import { mobileSessionCommandInputStyles } from './mobile-session-command-input-styles'
-import { mobileSessionFrameStyles } from './mobile-session-frame-styles'
-import { mobileSessionReaderStyles } from './mobile-session-reader-styles'
-import { mobileSessionReviewCommentStyles } from './mobile-session-review-comment-styles'
+import { createMobileEinkChrome } from '../../../../src/theme/mobile-eink-chrome'
+import { darkPalette } from '../../../../src/theme/mobile-theme-palettes'
+import { createMobileSessionCommandInputStyles } from './mobile-session-command-input-styles'
+import { createMobileSessionFrameStyles } from './mobile-session-frame-styles'
+import { createMobileSessionReaderStyles } from './mobile-session-reader-styles'
+import { createMobileSessionReviewCommentStyles } from './mobile-session-review-comment-styles'
+
+// Why: legacy static export for tests and tooling that still import this module.
+const darkChrome = createMobileEinkChrome(false, darkPalette)
 
 export const styles = {
-  ...mobileSessionFrameStyles,
-  ...mobileSessionReaderStyles,
-  ...mobileSessionReviewCommentStyles,
-  ...mobileSessionCommandInputStyles
+  ...createMobileSessionFrameStyles(darkPalette, darkChrome),
+  ...createMobileSessionReaderStyles(darkPalette, darkChrome),
+  ...createMobileSessionReviewCommentStyles(darkPalette, darkChrome),
+  ...createMobileSessionCommandInputStyles(darkPalette, darkChrome)
 }

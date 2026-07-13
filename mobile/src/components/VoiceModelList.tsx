@@ -1,6 +1,10 @@
+import { useMemo } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, Download, Trash2 } from 'lucide-react-native'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import {
   isModelInFlight,
   type MobileSpeechModel,
@@ -48,6 +52,9 @@ export function VoiceModelList({
   onDownload,
   onDelete
 }: Props): React.JSX.Element {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createVoiceModelListStyles(colors, chrome), [colors, chrome])
+
   return (
     <View style={disabled ? styles.disabled : undefined} pointerEvents={disabled ? 'none' : 'auto'}>
       {setup.models.map((model, idx) => {
@@ -135,52 +142,49 @@ export function VoiceModelList({
   )
 }
 
-const styles = StyleSheet.create({
-  disabled: { opacity: 0.5 },
-  modelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md + 2
-  },
-  modelInfo: { flex: 1, minWidth: 0 },
-  modelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  modelLabel: {
-    color: colors.textPrimary,
-    fontSize: typography.bodySize,
-    fontWeight: '500',
-    flexShrink: 1
-  },
-  recommended: { color: colors.statusGreen, fontSize: 10, fontWeight: '700' },
-  modelMeta: { color: colors.textMuted, fontSize: typography.metaSize, marginTop: 2 },
-  modelStateText: { color: colors.textMuted, fontSize: typography.metaSize },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radii.button,
-    backgroundColor: colors.bgRaised
-  },
-  actionPressed: { opacity: 0.7 },
-  actionText: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
-  iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgRaised
-  },
-  readyActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  selectedTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  selectedText: { color: colors.statusGreen, fontSize: typography.metaSize, fontWeight: '600' },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-    marginHorizontal: spacing.md
-  }
-})
+function createVoiceModelListStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    disabled: { opacity: 0.5 },
+    modelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md + 2
+    },
+    modelInfo: { flex: 1, minWidth: 0 },
+    modelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    modelLabel: {
+      color: colors.textPrimary,
+      fontSize: typography.bodySize,
+      fontWeight: '500',
+      flexShrink: 1
+    },
+    recommended: { color: colors.statusGreen, fontSize: 10, fontWeight: '700' },
+    modelMeta: { color: colors.textMuted, fontSize: typography.metaSize, marginTop: 2 },
+    modelStateText: { color: colors.textMuted, fontSize: typography.metaSize },
+    actionButton: {
+      ...chrome.outlineButton,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 6
+    },
+    actionPressed: { opacity: 0.7 },
+    actionText: { color: colors.textSecondary, fontSize: typography.metaSize, fontWeight: '600' },
+    iconButton: {
+      ...chrome.toolbarIconButton,
+      width: 34,
+      height: 34
+    },
+    readyActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    selectedTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    selectedText: { color: colors.statusGreen, fontSize: typography.metaSize, fontWeight: '600' },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderSubtle,
+      marginHorizontal: spacing.md
+    }
+  })
+}

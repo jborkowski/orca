@@ -1,6 +1,10 @@
+import { useMemo } from 'react'
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { spacing, typography } from '../theme/mobile-theme'
+import type { MobileEinkChrome } from '../theme/mobile-eink-chrome'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import type { CompatVerdict } from '../transport/protocol-compat'
 
 const RELEASES_URL = 'https://github.com/stablyai/orca/releases'
@@ -11,6 +15,8 @@ type Props = {
 }
 
 export function ProtocolBlockScreen({ verdict }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createProtocolBlockScreenStyles(colors, chrome), [colors, chrome])
   const isMobileTooOld = verdict.reason === 'mobile-too-old'
   const mobileUpdateTarget =
     Platform.OS === 'ios'
@@ -62,62 +68,57 @@ export function ProtocolBlockScreen({ verdict }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg
-  },
-  card: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: radii.card,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle
-  },
-  title: {
-    fontSize: typography.titleSize,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm
-  },
-  body: {
-    fontSize: typography.bodySize,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.lg
-  },
-  primaryButton: {
-    backgroundColor: colors.textPrimary,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.button,
-    alignItems: 'center',
-    marginBottom: spacing.sm
-  },
-  primaryButtonText: {
-    fontSize: typography.bodySize,
-    fontWeight: '600',
-    color: colors.bgBase
-  },
-  secondaryButton: {
-    backgroundColor: colors.bgRaised,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.button,
-    alignItems: 'center'
-  },
-  secondaryButtonText: {
-    fontSize: typography.bodySize,
-    fontWeight: '600',
-    color: colors.textPrimary
-  },
-  recoveryNote: {
-    fontSize: typography.metaSize,
-    color: colors.textMuted,
-    lineHeight: 17,
-    marginTop: spacing.md
-  },
-  pressed: {
-    opacity: 0.7
-  }
-})
+function createProtocolBlockScreenStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgBase,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg
+    },
+    card: {
+      ...chrome.sectionCard,
+      padding: spacing.lg
+    },
+    title: {
+      fontSize: typography.titleSize,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: spacing.sm
+    },
+    body: {
+      fontSize: typography.bodySize,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.lg
+    },
+    primaryButton: {
+      ...chrome.primaryButton,
+      alignItems: 'center',
+      marginBottom: spacing.sm
+    },
+    primaryButtonText: {
+      fontSize: typography.bodySize,
+      fontWeight: '600',
+      color: colors.onSurfaceBright
+    },
+    secondaryButton: {
+      ...chrome.outlineButton,
+      alignItems: 'center'
+    },
+    secondaryButtonText: {
+      fontSize: typography.bodySize,
+      fontWeight: '600',
+      color: colors.textPrimary
+    },
+    recoveryNote: {
+      fontSize: typography.metaSize,
+      color: colors.textMuted,
+      lineHeight: 17,
+      marginTop: spacing.md
+    },
+    pressed: {
+      opacity: 0.7
+    }
+  })
+}

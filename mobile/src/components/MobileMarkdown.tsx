@@ -1,6 +1,8 @@
 import { Fragment, memo, useMemo, type ReactNode } from 'react'
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { radii, spacing, typography } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { normalizeMobileMarkdownPreviewHtml } from './mobile-markdown-preview-html'
 import { parseMobileMarkdown } from './mobile-markdown-parser'
 
@@ -8,6 +10,8 @@ type Props = {
   content?: string
   fallback?: string
 }
+
+type MarkdownStyles = ReturnType<typeof createMobileMarkdownStyles>
 
 const MAX_TABLE_ROWS = 40
 const MAX_TABLE_COLUMNS = 8
@@ -19,7 +23,7 @@ function openMarkdownUrl(url: string): void {
   }
 }
 
-function renderInline(text: string): ReactNode[] {
+function renderInline(text: string, styles: MarkdownStyles): ReactNode[] {
   const parts: ReactNode[] = []
   const pattern =
     /(!\[[^\]]*\]\([^)]+\)|`[^`]+`|~~[^~]+~~|\*\*[^*]+\*\*|__[^_]+__|\*[^*\n]+\*|_[^_\n]+_|\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s<]+)/g
@@ -87,6 +91,8 @@ function renderInline(text: string): ReactNode[] {
 }
 
 function MobileMarkdownInner({ content, fallback = '' }: Props) {
+  const { colors } = useMobileTheme()
+  const styles = useMemo(() => createMobileMarkdownStyles(colors), [colors])
   const text = content?.trim() ?? ''
   const previewText = useMemo(() => normalizeMobileMarkdownPreviewHtml(text), [text])
   const blocks = useMemo(() => parseMobileMarkdown(previewText), [previewText])
@@ -103,14 +109,14 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
               key={index}
               style={[styles.heading, block.level <= 2 ? styles.headingLarge : null]}
             >
-              {renderInline(block.text)}
+              {renderInline(block.text, styles)}
             </Text>
           )
         }
         if (block.type === 'quote') {
           return (
             <View key={index} style={styles.quote}>
-              <Text style={styles.quoteText}>{renderInline(block.text)}</Text>
+              <Text style={styles.quoteText}>{renderInline(block.text, styles)}</Text>
             </View>
           )
         }
@@ -147,7 +153,7 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
                 <View style={styles.tableRow}>
                   {visibleHeaders.map((header, cellIndex) => (
                     <Text key={cellIndex} style={[styles.tableCell, styles.tableHeader]}>
-                      {renderInline(header)}
+                      {renderInline(header, styles)}
                     </Text>
                   ))}
                 </View>
@@ -155,7 +161,7 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
                   <View key={rowIndex} style={styles.tableRow}>
                     {visibleHeaders.map((_, cellIndex) => (
                       <Text key={cellIndex} style={styles.tableCell}>
-                        {renderInline(row[cellIndex] ?? '')}
+                        {renderInline(row[cellIndex] ?? '', styles)}
                       </Text>
                     ))}
                   </View>
@@ -185,7 +191,7 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
                         ? '[x]'
                         : '[ ]'}
                   </Text>
-                  <Text style={styles.listText}>{renderInline(item.text)}</Text>
+                  <Text style={styles.listText}>{renderInline(item.text, styles)}</Text>
                 </View>
               ))}
             </View>
@@ -199,7 +205,7 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
             {block.text.split('\n').map((line, lineIndex) => (
               <Fragment key={lineIndex}>
                 {lineIndex > 0 ? '\n' : null}
-                {renderInline(line)}
+                {renderInline(line, styles)}
               </Fragment>
             ))}
           </Text>
@@ -211,146 +217,150 @@ function MobileMarkdownInner({ content, fallback = '' }: Props) {
 
 export const MobileMarkdown = memo(MobileMarkdownInner)
 
-const styles = StyleSheet.create({
-  root: {
-    gap: spacing.sm
-  },
-  paragraph: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textPrimary
-  },
-  heading: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  headingLarge: {
-    fontSize: 15,
-    lineHeight: 21
-  },
-  bold: {
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  italic: {
-    fontStyle: 'italic'
-  },
-  strike: {
-    textDecorationLine: 'line-through'
-  },
-  link: {
-    color: colors.accentBlue,
-    textDecorationLine: 'underline'
-  },
-  inlineCode: {
-    fontFamily: typography.monoFamily,
-    fontSize: 12,
-    color: colors.textPrimary,
-    backgroundColor: colors.bgRaised,
-    borderRadius: radii.row,
-    paddingHorizontal: 4
-  },
-  quote: {
-    borderLeftWidth: 2,
-    borderLeftColor: colors.borderSubtle,
-    paddingLeft: spacing.sm
-  },
-  quoteText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textSecondary
-  },
-  codeBlock: {
-    backgroundColor: colors.bgRaised,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
-    padding: spacing.sm
-  },
-  codeLanguage: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase'
-  },
-  codeText: {
-    fontFamily: typography.monoFamily,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textPrimary
-  },
-  imageFrame: {
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
-    backgroundColor: colors.bgRaised,
-    overflow: 'hidden',
-    padding: spacing.sm
-  },
-  imageCaption: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    fontSize: 11,
-    color: colors.textSecondary
-  },
-  table: {
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radii.input,
-    overflow: 'hidden',
-    backgroundColor: colors.bgPanel
-  },
-  tableRow: {
-    flexDirection: 'row'
-  },
-  tableCell: {
-    minWidth: 112,
-    maxWidth: 220,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.borderSubtle,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textPrimary
-  },
-  tableHeader: {
-    fontWeight: '700',
-    backgroundColor: colors.bgRaised
-  },
-  tableTruncated: {
-    padding: spacing.sm,
-    fontSize: 12,
-    color: colors.textMuted
-  },
-  list: {
-    gap: spacing.xs
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm
-  },
-  listMarker: {
-    width: 22,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textSecondary,
-    fontFamily: typography.monoFamily
-  },
-  listText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.textPrimary
-  },
-  rule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle
-  }
-})
+function createMobileMarkdownStyles(colors: MobileThemeColors) {
+  return StyleSheet.create({
+    root: {
+      gap: spacing.sm
+    },
+    paragraph: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textPrimary
+    },
+    heading: {
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    headingLarge: {
+      fontSize: 15,
+      lineHeight: 21
+    },
+    bold: {
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    italic: {
+      fontStyle: 'italic'
+    },
+    strike: {
+      textDecorationLine: 'line-through'
+    },
+    link: {
+      color: colors.accentBlue,
+      textDecorationLine: 'underline'
+    },
+    inlineCode: {
+      fontFamily: typography.monoFamily,
+      fontSize: 12,
+      color: colors.textPrimary,
+      backgroundColor: colors.bgRaised,
+      borderRadius: radii.row,
+      paddingHorizontal: 4,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderSubtle
+    },
+    quote: {
+      borderLeftWidth: 2,
+      borderLeftColor: colors.borderSubtle,
+      paddingLeft: spacing.sm
+    },
+    quoteText: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textSecondary
+    },
+    codeBlock: {
+      backgroundColor: colors.bgRaised,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radii.input,
+      padding: spacing.sm
+    },
+    codeLanguage: {
+      fontSize: 10,
+      color: colors.textMuted,
+      marginBottom: spacing.xs,
+      textTransform: 'uppercase'
+    },
+    codeText: {
+      fontFamily: typography.monoFamily,
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textPrimary
+    },
+    imageFrame: {
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radii.input,
+      backgroundColor: colors.bgRaised,
+      overflow: 'hidden',
+      padding: spacing.sm
+    },
+    imageCaption: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      fontSize: 11,
+      color: colors.textSecondary
+    },
+    table: {
+      borderTopWidth: 1,
+      borderLeftWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radii.input,
+      overflow: 'hidden',
+      backgroundColor: colors.bgPanel
+    },
+    tableRow: {
+      flexDirection: 'row'
+    },
+    tableCell: {
+      minWidth: 112,
+      maxWidth: 220,
+      borderRightWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.borderSubtle,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textPrimary
+    },
+    tableHeader: {
+      fontWeight: '700',
+      backgroundColor: colors.bgRaised
+    },
+    tableTruncated: {
+      padding: spacing.sm,
+      fontSize: 12,
+      color: colors.textMuted
+    },
+    list: {
+      gap: spacing.xs
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm
+    },
+    listMarker: {
+      width: 22,
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textSecondary,
+      fontFamily: typography.monoFamily
+    },
+    listText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textPrimary
+    },
+    rule: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderSubtle
+    }
+  })
+}

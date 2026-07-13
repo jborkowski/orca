@@ -670,9 +670,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     pumpWrites(terminalGeneration);
   }
 
-${TERMINAL_WEBGL_RECOVERY_JS}
-
-  function init(cols, rows, initialData, nextTheme, nextFontScale, preserveScroll, nextOscLinks) {
+  function init(cols, rows, initialData, nextTheme, nextFontScale, preserveScroll, nextOscLinks, disableWebgl) {
     if (typeof nextFontScale === 'number' && nextFontScale > 0) currentTextScale = nextFontScale;
     // Why: a width-reflow re-stream rewraps the same content at new cols.
     // Distance-from-bottom (rows) is the only stable anchor across reflow,
@@ -750,7 +748,9 @@ ${TERMINAL_WEBGL_RECOVERY_JS}
       allowProposedApi: true
     });
     term.open(surface);
-    attachWebglAddon(true);
+    if (!disableWebgl && window.WebglAddon && window.WebglAddon.WebglAddon) {
+      try { var webglAddon = new window.WebglAddon.WebglAddon(); term.loadAddon(webglAddon); if (webglAddon.onContextLoss) webglAddon.onContextLoss(function() { try { webglAddon && webglAddon.dispose && webglAddon.dispose(); } catch (e) {} }); } catch (e) {}
+    }
     if (window.Unicode11Addon && window.Unicode11Addon.Unicode11Addon) try { term.loadAddon(new window.Unicode11Addon.Unicode11Addon()); term.unicode.activeVersion = '11'; } catch (e) {}
     if (typeof replayData === 'string' && replayData.length > 0) {
       enqueueWrite(replayData);
@@ -935,10 +935,8 @@ ${TERMINAL_WEBGL_RECOVERY_JS}
       handledMessageIds.push(msg.id);
       if (handledMessageIds.length > 256) handledMessageIds.shift();
     }
-    if (msg.type === 'ping') {
-      notify({ type: 'pong', pingId: msg.id });
-    } else if (msg.type === 'init') {
-      init(msg.cols, msg.rows, msg.initialData, msg.terminalTheme, msg.fontScale, msg.preserveScroll, msg.oscLinks);
+    if (msg.type === 'init') {
+      init(msg.cols, msg.rows, msg.initialData, msg.terminalTheme, msg.fontScale, msg.preserveScroll, msg.oscLinks, msg.disableWebgl);
     } else if (msg.type === 'set-font-scale') {
       // Why: ignore RN echoing back the value a pinch just set (msg.fontScale ===
       // currentTextScale) so the post-pinch state isn't reset; only apply changes.

@@ -2,7 +2,7 @@ import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native
 import { RefreshCw } from 'lucide-react-native'
 import type { RefObject } from 'react'
 import type { DiffComment } from '../../../src/shared/types'
-import { colors } from '../theme/mobile-theme'
+import { useMobileTheme } from '../theme/mobile-theme-context'
 import { MobileDiffReviewLine } from './MobileDiffReviewLine'
 import type {
   ReviewDiffLine,
@@ -10,7 +10,7 @@ import type {
   ReviewScreenState
 } from '../session/mobile-diff-review-screen-model'
 import type { MobileDiffReviewQueueItem } from '../session/mobile-diff-review-queue'
-import { mobileDiffReviewStyles as styles } from './mobile-diff-review-screen-styles'
+import { useMobileDiffReviewStyles } from './mobile-diff-review-screen-styles'
 
 type Props = {
   activeHunkIndex: number | null
@@ -39,6 +39,7 @@ export function MobileDiffReviewBody({
   onEditNote,
   onRetry
 }: Props) {
+  const styles = useMobileDiffReviewStyles()
   if (screenState.kind === 'loading') {
     return <CenteredState text="Loading review..." busy />
   }
@@ -139,6 +140,8 @@ function CenteredState({
   text: string
   onRetry?: () => void
 }) {
+  const { colors } = useMobileTheme()
+  const styles = useMobileDiffReviewStyles()
   return (
     <View style={styles.state}>
       {busy ? (

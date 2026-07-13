@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -9,7 +9,10 @@ import {
   saveTerminalLinkOpenMode,
   type MobileTerminalLinkOpenMode
 } from '../src/storage/preferences'
-import { colors, radii, spacing, typography } from '../src/theme/mobile-theme'
+import { spacing, typography } from '../src/theme/mobile-theme'
+import type { MobileThemeColors } from '../src/theme/mobile-theme-palettes'
+import type { MobileEinkChrome } from '../src/theme/mobile-eink-chrome'
+import { useMobileTheme } from '../src/theme/mobile-theme-context'
 
 const LINK_MODE_OPTIONS: PickerOption<MobileTerminalLinkOpenMode>[] = [
   {
@@ -33,6 +36,8 @@ function linkModeLabel(mode: MobileTerminalLinkOpenMode): string {
 export default function BrowserSettingsScreen(): React.JSX.Element {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createBrowserSettingsStyles(colors, chrome), [colors, chrome])
   const [linkMode, setLinkMode] = useState<MobileTerminalLinkOpenMode>('orca-browser')
   const [pickerOpen, setPickerOpen] = useState(false)
 
@@ -86,78 +91,78 @@ export default function BrowserSettingsScreen(): React.JSX.Element {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bgBase,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 0
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl
-  },
-  groupHeading: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.xs
-  },
-  groupDescription: {
-    fontSize: typography.bodySize - 1,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    paddingHorizontal: spacing.xs
-  },
-  section: {
-    backgroundColor: colors.bgPanel,
-    borderRadius: radii.card,
-    overflow: 'hidden'
-  },
-  sectionTopGap: {
-    marginTop: spacing.sm
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md + 2
-  },
-  rowPressed: {
-    backgroundColor: colors.bgRaised
-  },
-  rowContent: {
-    flex: 1
-  },
-  rowLabel: {
-    fontSize: typography.bodySize,
-    fontWeight: '500',
-    color: colors.textPrimary
-  },
-  rowSublabel: {
-    fontSize: typography.bodySize - 2,
-    color: colors.textSecondary,
-    marginTop: 2
-  }
-})
+function createBrowserSettingsStyles(colors: MobileThemeColors, chrome: MobileEinkChrome) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bgBase,
+      paddingHorizontal: spacing.lg,
+      paddingTop: 0
+    },
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      marginBottom: spacing.lg
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.sm
+    },
+    heading: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.textPrimary
+    },
+    scrollContent: {
+      paddingBottom: spacing.xl
+    },
+    groupHeading: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textMuted,
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+      paddingHorizontal: spacing.xs
+    },
+    groupDescription: {
+      fontSize: typography.bodySize - 1,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      paddingHorizontal: spacing.xs
+    },
+    section: {
+      ...chrome.sectionCard
+    },
+    sectionTopGap: {
+      marginTop: spacing.sm
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm + 2,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md + 2
+    },
+    rowPressed: {
+      ...chrome.listRowPressed
+    },
+    rowContent: {
+      flex: 1
+    },
+    rowLabel: {
+      fontSize: typography.bodySize,
+      fontWeight: '500',
+      color: colors.textPrimary
+    },
+    rowSublabel: {
+      fontSize: typography.bodySize - 2,
+      color: colors.textSecondary,
+      marginTop: 2
+    }
+  })
+}

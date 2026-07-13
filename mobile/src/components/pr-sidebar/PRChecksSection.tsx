@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight, ExternalLink, RotateCw, Sparkles } from 'lucide-react-native'
-import { colors } from '../../theme/mobile-theme'
 import type { PRCheckDetail } from '../../../../src/shared/types'
 import type { RpcClient } from '../../transport/rpc-client'
 import { fetchPRCheckDetails, type GitHubPrRepoSlug } from '../../session/github-pr-rpc'
 import type { MobilePrActions } from '../../session/use-mobile-pr-actions'
+import { useMobileTheme } from '../../theme/mobile-theme-context'
 import {
   checkOutcome,
   checkOutcomeToken,
@@ -18,8 +18,8 @@ import {
 import { statusColor } from './pr-sidebar-status-color'
 import { PRSection } from './PRSection'
 import { PRCheckDetailView, type DetailEntry } from './PRCheckDetail'
-import { mobilePrSidebarStyles as styles } from './mobile-pr-sidebar-styles'
-import { prAiTriageStyles as triageStyles } from './pr-ai-triage-styles'
+import { createMobilePrSidebarStyles } from './mobile-pr-sidebar-styles'
+import { createPrAiTriageStyles } from './pr-ai-triage-styles'
 
 // Launches the "Fix checks with AI" agent. Absent for display-only usages.
 export type PrChecksTriage = {
@@ -42,6 +42,9 @@ type Props = {
 // fetch github.prCheckDetails, cached per check key (U5). Display-only; the
 // rerun action is U6.
 export function PRChecksSection({ checks, client, worktreeId, prRepo, actions, triage }: Props) {
+  const { colors, chrome } = useMobileTheme()
+  const styles = useMemo(() => createMobilePrSidebarStyles(colors, chrome), [colors, chrome])
+  const triageStyles = useMemo(() => createPrAiTriageStyles(colors, chrome), [colors, chrome])
   const sorted = sortPRChecks(checks)
   const summary = summarizePRChecks(checks)
   const rerunBusy = actions?.isBusy({ kind: 'rerun' }) ?? false

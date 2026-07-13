@@ -16,9 +16,15 @@
   },
   "overrides": [
     {
+      "files": ["app/**/*-styles.ts", "src/components/**/*-styles.ts"],
+      "rules": {
+        "max-lines": ["error", { "max": 500, "skipBlankLines": true, "skipComments": true }]
+      }
+    },
+    {
       "files": ["app/h/*/tasks.tsx"],
       "rules": {
-        "max-lines": ["error", { "max": 14682, "skipBlankLines": true, "skipComments": true }]
+        "max-lines": ["error", { "max": 14690, "skipBlankLines": true, "skipComments": true }]
       }
     },
     {

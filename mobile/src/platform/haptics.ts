@@ -1,7 +1,15 @@
 import { Platform } from 'react-native'
 import * as Haptics from 'expo-haptics'
+import { isEinkDisplayModeFlagActive } from '../theme/mobile-theme-context'
+
+function shouldTriggerHaptics(): boolean {
+  return !isEinkDisplayModeFlagActive()
+}
 
 export function triggerMediumImpact(): void {
+  if (!shouldTriggerHaptics()) {
+    return
+  }
   if (Platform.OS === 'android') {
     // Why: Android's Vibrator API (used by impactAsync) is unreliable for haptic
     // feedback. performAndroidHapticsAsync uses the native HapticFeedbackConstants
@@ -13,6 +21,9 @@ export function triggerMediumImpact(): void {
 }
 
 export function triggerSelection(): void {
+  if (!shouldTriggerHaptics()) {
+    return
+  }
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Gesture_Start).catch(() => {})
   } else {
@@ -21,6 +32,9 @@ export function triggerSelection(): void {
 }
 
 export function triggerSuccess(): void {
+  if (!shouldTriggerHaptics()) {
+    return
+  }
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Confirm).catch(() => {})
   } else {
@@ -29,6 +43,9 @@ export function triggerSuccess(): void {
 }
 
 export function triggerError(): void {
+  if (!shouldTriggerHaptics()) {
+    return
+  }
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject).catch(() => {})
   } else {
@@ -37,6 +54,9 @@ export function triggerError(): void {
 }
 
 export function triggerEdgeBump(): void {
+  if (!shouldTriggerHaptics()) {
+    return
+  }
   if (Platform.OS === 'android') {
     void Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Clock_Tick).catch(() => {})
   } else {
