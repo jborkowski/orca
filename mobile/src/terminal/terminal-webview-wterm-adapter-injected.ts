@@ -9,6 +9,11 @@ export const TERMINAL_WTERM_ADAPTER_JS = `
   ${TERMINAL_GHOSTTY_SCROLLBACK_JS}
   ${TERMINAL_WTERM_BUFFER_ADAPTER_JS}
 
+  function isEinkPresentationTheme(theme) {
+    return !!theme && theme.background === '#ffffff' && theme.foreground === '#111111' &&
+      theme.black === '#111111' && theme.white === '#111111';
+  }
+
   function OrcaWtermTerminal(options) {
     var self = this;
     var state = {
@@ -92,6 +97,8 @@ export const TERMINAL_WTERM_ADAPTER_JS = `
     if (!this.element) return;
     var style = this.element.style;
     var theme = state.theme || {};
+    var core = this._terminalCore();
+    if (core) core.einkMode = isEinkPresentationTheme(theme);
     style.setProperty('--term-font-family', state.fontFamily);
     style.setProperty('--term-font-size', state.fontSize + 'px');
     style.setProperty('--term-fg', theme.foreground || '#c0caf5');
@@ -140,6 +147,7 @@ export const TERMINAL_WTERM_ADAPTER_JS = `
       scrollbackLimit: this.scrollback
     });
     var core = new OrcaGhosttyScrollbackCore(ghosttyCore, this.scrollback);
+    core.einkMode = isEinkPresentationTheme(this._presentationState.theme);
     if (this.disposed) return;
     var self = this;
     this.wterm = new window.WTerm(element, {

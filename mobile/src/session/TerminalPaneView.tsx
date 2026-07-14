@@ -77,7 +77,9 @@ export function TerminalPaneView({
         ref={setRef}
         style={styles.terminalWebView}
         terminalTheme={resolvedTerminalTheme}
-        keyboardOffsetY={keyboardLift}
+        // Why: e-ink Android compositors can corrupt or massively magnify a
+        // transformed WebView; the resized window already keeps input visible.
+        keyboardOffsetY={isEinkMode ? 0 : keyboardLift}
         textScale={textScale}
         onWebReady={() => onWebReady(handle)}
         onSelectionMode={(a) => onSelectionMode(handle, a)}

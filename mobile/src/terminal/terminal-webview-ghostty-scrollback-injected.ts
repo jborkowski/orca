@@ -16,6 +16,24 @@ export const TERMINAL_GHOSTTY_SCROLLBACK_JS = `
     return clone;
   }
 
+  function normalizeGhosttyCellForEink(cell, enabled) {
+    if (!enabled) return cell;
+    var hasExplicitColor = cell && (
+      cell.fg !== GHOSTTY_DEFAULT_COLOR || cell.bg !== GHOSTTY_DEFAULT_COLOR ||
+      typeof cell.fgRgb === 'number' || typeof cell.bgRgb === 'number'
+    );
+    if (!hasExplicitColor && !(cell && (cell.flags & 32))) return cell;
+    var normalized = cloneGhosttyCell(cell);
+    // Why: one ANSI palette drives both foreground and background in wterm.
+    // Flatten cell colors so e-ink prompts cannot become black-on-black blocks.
+    normalized.fg = GHOSTTY_DEFAULT_COLOR;
+    normalized.bg = GHOSTTY_DEFAULT_COLOR;
+    normalized.flags = normalized.flags & ~32;
+    delete normalized.fgRgb;
+    delete normalized.bgRgb;
+    return normalized;
+  }
+
   function ghosttyCellHasContent(cell) {
     return cell.char !== 32 || cell.flags !== 0 || cell.fg !== GHOSTTY_DEFAULT_COLOR ||
       cell.bg !== GHOSTTY_DEFAULT_COLOR || typeof cell.fgRgb === 'number' ||
@@ -28,6 +46,7 @@ export const TERMINAL_GHOSTTY_SCROLLBACK_JS = `
     this.lines = [];
     this.cols = 0;
     this.rows = 0;
+    this.einkMode = false;
   }
 
   OrcaGhosttyScrollbackCore.prototype.init = function(cols, rows) {
@@ -102,7 +121,8 @@ export const TERMINAL_GHOSTTY_SCROLLBACK_JS = `
 
   OrcaGhosttyScrollbackCore.prototype.getScrollbackCell = function(offset, col) {
     var line = this.lines[this.lines.length - 1 - offset];
-    return line && line.cells[col] ? line.cells[col] : GHOSTTY_BLANK_CELL;
+    var cell = line && line.cells[col] ? line.cells[col] : GHOSTTY_BLANK_CELL;
+    return normalizeGhosttyCellForEink(cell, this.einkMode);
   };
 
   OrcaGhosttyScrollbackCore.prototype.getScrollbackLineLen = function(offset) {
@@ -110,8 +130,12 @@ export const TERMINAL_GHOSTTY_SCROLLBACK_JS = `
     return line ? line.length : 0;
   };
 
+  OrcaGhosttyScrollbackCore.prototype.getCell = function(row, col) {
+    return normalizeGhosttyCellForEink(this.core.getCell(row, col), this.einkMode);
+  };
+
   var ghosttyDelegates = [
-    'getCell', 'isDirtyRow', 'clearDirty', 'getCols', 'getRows', 'getCursor',
+    'isDirtyRow', 'clearDirty', 'getCols', 'getRows', 'getCursor',
     'cursorKeysApp', 'bracketedPaste', 'usingAltScreen', 'getTitle', 'getResponse',
     'getUnhandledSequences'
   ];

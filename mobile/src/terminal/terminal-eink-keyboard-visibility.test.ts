@@ -29,15 +29,32 @@ const terminalAppearanceSyncSource = readFileSync(
   new URL('./use-terminal-webview-appearance-sync.ts', import.meta.url),
   'utf8'
 )
+const ghosttyScrollbackSource = readFileSync(
+  new URL('./terminal-webview-ghostty-scrollback-injected.ts', import.meta.url),
+  'utf8'
+)
+const wtermAdapterSource = readFileSync(
+  new URL('./terminal-webview-wterm-adapter-injected.ts', import.meta.url),
+  'utf8'
+)
 
 describe('Android e-ink terminal keyboard visibility', () => {
   it('keeps the native WebView fixed and applies keyboard avoidance inside its document', () => {
     expect(terminalPaneSource).not.toContain('transform: [{ translateY: -keyboardLift }]')
-    expect(terminalPaneSource).toContain('keyboardOffsetY={keyboardLift}')
+    expect(terminalPaneSource).toContain('keyboardOffsetY={isEinkMode ? 0 : keyboardLift}')
     expect(terminalAppearanceSyncSource).toContain("type: 'set-keyboard-offset'")
     expect(terminalHtmlSource).toContain('function getSurfacePanY()')
     expect(terminalHtmlSource).toContain("msg.type === 'set-keyboard-offset'")
     expect(terminalHtmlSource).toContain("getSurfacePanY() + 'px) scale('")
+  })
+
+  it('flattens ANSI foreground and background colors before e-ink rendering', () => {
+    expect(ghosttyScrollbackSource).toContain('normalizeGhosttyCellForEink')
+    expect(ghosttyScrollbackSource).toContain('normalized.fg = GHOSTTY_DEFAULT_COLOR')
+    expect(ghosttyScrollbackSource).toContain('normalized.bg = GHOSTTY_DEFAULT_COLOR')
+    expect(ghosttyScrollbackSource).toContain('normalized.flags = normalized.flags & ~32')
+    expect(wtermAdapterSource).toContain('isEinkPresentationTheme')
+    expect(wtermAdapterSource).toContain('core.einkMode =')
   })
 
   it('paints the native WebView backing surface with the active terminal theme', () => {
