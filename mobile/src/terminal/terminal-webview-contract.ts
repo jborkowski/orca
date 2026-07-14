@@ -42,6 +42,9 @@ export type TerminalSelectionEvents = {
 export type TerminalWebViewProps = {
   style?: StyleProp<ViewStyle>
   terminalTheme?: MobileTerminalTheme
+  // Why: shifting the native Android WebView exposes its dark compositor layer on
+  // e-ink devices; the terminal document applies keyboard avoidance internally.
+  keyboardOffsetY?: number
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
   // renderer fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number

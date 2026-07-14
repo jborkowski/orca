@@ -1,4 +1,4 @@
-import { useRef, useCallback, forwardRef, useImperativeHandle, useEffect, useMemo } from 'react'
+import { useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from 'react'
 import { Platform, View } from 'react-native'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import type { TerminalOscLinkRange } from './terminal-osc-link-ranges'
@@ -13,6 +13,7 @@ import { WTERM_WEBVIEW_SOURCE } from './terminal-webview-html'
 import type { TerminalWebViewCommand } from './terminal-webview-messages'
 import { createTerminalWebViewPendingMessages } from './terminal-webview-pending-messages'
 import { routeTerminalQueryReply } from './terminal-webview-query-reply-routing'
+import * as appearance from './use-terminal-webview-appearance-sync'
 
 type Props = TerminalWebViewProps
 
@@ -20,6 +21,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   {
     style,
     terminalTheme,
+    keyboardOffsetY = 0,
     textScale = 1,
     onWebReady,
     onEngineError,
@@ -91,7 +93,7 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
       }
       // Why: reload clears queued commands, so readiness must always restore the
       // native-selected theme even when its value did not change in React.
-      sendToWebView({ type: 'set-theme', terminalTheme })
+      appearance.restoreTerminalWebViewAppearance(sendToWebView, terminalTheme, keyboardOffsetY)
       flushPendingMessages()
     },
     [
@@ -100,7 +102,8 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
       flushPendingMessages,
       onWebReady,
       sendToWebView,
-      terminalTheme
+      terminalTheme,
+      keyboardOffsetY
     ]
   )
 
@@ -259,15 +262,12 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
     webViewRef.current?.reload()
   }, [armWebReadyWatchdog, clearEngineError, pendingMessages])
 
-  useEffect(() => {
-    postMessage({ type: 'set-theme', terminalTheme })
-  }, [postMessage, terminalTheme])
-
-  // Why: live-apply text-size changes to an already-mounted terminal (the pane
-  // stays alive while the user visits Settings), so no terminal reload is needed.
-  useEffect(() => {
-    postMessage({ type: 'set-font-scale', fontScale: textScale })
-  }, [postMessage, textScale])
+  const terminalBackgroundStyle = appearance.useTerminalWebViewAppearanceSync(
+    postMessage,
+    terminalTheme,
+    textScale,
+    keyboardOffsetY
+  )
 
   useImperativeHandle(
     ref,
@@ -396,11 +396,11 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
   )
 
   return (
-    <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, style]}>
+    <View style={[TERMINAL_WEBVIEW_FRAME_STYLES.container, terminalBackgroundStyle, style]}>
       <WebView
         ref={webViewRef}
         source={WTERM_WEBVIEW_SOURCE}
-        style={TERMINAL_WEBVIEW_FRAME_STYLES.webview}
+        style={[TERMINAL_WEBVIEW_FRAME_STYLES.webview, terminalBackgroundStyle]}
         originWhitelist={['*']}
         javaScriptEnabled
         scrollEnabled={false}

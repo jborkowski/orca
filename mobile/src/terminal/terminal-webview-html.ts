@@ -294,6 +294,7 @@ window.onerror = function(msg) {
     });
   }
   var panX = 0, panY = 0;
+  var keyboardOffsetY = 0;
   var smoothScrollOffsetY = 0;
   var pendingNormalScrollDeltaY = 0;
   var normalScrollFrameId = null;
@@ -358,8 +359,10 @@ window.onerror = function(msg) {
 
   function getTotalScale() { return currentScale * userScale; }
 
+  function getSurfacePanY() { return panY - keyboardOffsetY; }
+
   function updateTransform() {
-    surface.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + getTotalScale() + ')';
+    surface.style.transform = 'translate(' + panX + 'px,' + getSurfacePanY() + 'px) scale(' + getTotalScale() + ')';
     updateScrollIndicator(false);
     if (selMode === 'select') repositionOverlay();
   }
@@ -950,6 +953,11 @@ ${TERMINAL_WEBVIEW_THEME_JS}
         panY = 0;
         applyTextScale(msg.fontScale);
       }
+    } else if (msg.type === 'set-keyboard-offset') {
+      // Why: keep the native Android WebView stationary; translating it exposes a
+      // dark compositor backing surface on e-ink devices while the IME is open.
+      keyboardOffsetY = Math.max(0, Number(msg.offsetY) || 0);
+      updateTransform();
     } else if (msg.type === 'resize') {
       resize(msg.cols, msg.rows);
     } else if (msg.type === 'reflow') { reflow(msg.cols, msg.rows);
@@ -1157,7 +1165,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     var total = getTotalScale();
     if (total <= 0) total = 1;
     var sx = (clientX - panX) / total;
-    var sy = (clientY - panY) / total;
+    var sy = (clientY - getSurfacePanY()) / total;
     var col = Math.floor(sx / cellW);
     var viewportRow = Math.floor(sy / cellH);
     if (col < 0) col = 0;
@@ -1178,7 +1186,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     var total = getTotalScale();
     if (total <= 0) total = 1;
     var sx = (clientX - panX) / total;
-    var sy = (clientY - panY) / total;
+    var sy = (clientY - getSurfacePanY()) / total;
     var maxX = Math.max(0, term.cols * cellW - 1);
     var maxY = Math.max(0, term.rows * cellH - 1);
     if (sx < 0) sx = 0;
@@ -1443,7 +1451,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
     var sx = col * cellW;
     var sy = viewportRow * cellH;
     var total = getTotalScale();
-    return { x: sx * total + panX, y: sy * total + panY };
+    return { x: sx * total + panX, y: sy * total + getSurfacePanY() };
   }
 
   function getLineText(absRow) {
@@ -1685,7 +1693,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
         var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         var total = getTotalScale();
         ts.pinchSurfX = (mx - panX) / total;
-        ts.pinchSurfY = (my - panY) / total;
+        ts.pinchSurfY = (my - getSurfacePanY()) / total;
       } else if (e.touches.length === 1) {
         ts.isPinching = false;
         ts.lastX = e.touches[0].clientX;
@@ -1718,7 +1726,7 @@ ${TERMINAL_WEBVIEW_THEME_JS}
 
         var total = getTotalScale();
         panX = mx - ts.pinchSurfX * total;
-        panY = my - ts.pinchSurfY * total;
+        panY = my - ts.pinchSurfY * total + keyboardOffsetY;
         clampPan();
         updateTransform();
 

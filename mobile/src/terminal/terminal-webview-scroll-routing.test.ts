@@ -157,7 +157,7 @@ describe('TerminalWebView scroll routing', () => {
       'function updateScrollIndicator(reveal)'
     )
     expect(updateTransformBlock).toContain(
-      "surface.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + getTotalScale() + ')';"
+      "surface.style.transform = 'translate(' + panX + 'px,' + getSurfacePanY() + 'px) scale(' + getTotalScale() + ')';"
     )
     expect(source).not.toContain("querySelector('.xterm-screen')")
     expect(source).not.toContain('updateTerminalScreenTransform')

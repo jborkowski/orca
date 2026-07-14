@@ -71,16 +71,13 @@ export function TerminalPaneView({
       // Why: inactive terminal WebViews stay mounted to preserve terminal state,
       // while touch and visibility are disabled until the tab is active again.
       pointerEvents={active ? 'auto' : 'none'}
-      style={[
-        styles.terminalPane,
-        keyboardLift > 0 && { transform: [{ translateY: -keyboardLift }] },
-        !active && styles.terminalPaneHidden
-      ]}
+      style={[styles.terminalPane, !active && styles.terminalPaneHidden]}
     >
       <TerminalWebView
         ref={setRef}
         style={styles.terminalWebView}
         terminalTheme={resolvedTerminalTheme}
+        keyboardOffsetY={keyboardLift}
         textScale={textScale}
         onWebReady={() => onWebReady(handle)}
         onSelectionMode={(a) => onSelectionMode(handle, a)}

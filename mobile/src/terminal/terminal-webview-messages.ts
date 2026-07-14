@@ -18,6 +18,7 @@ export type TerminalWebViewCommand =
       preserveScroll?: boolean
     }
   | { type: 'set-font-scale'; id?: number; fontScale: number }
+  | { type: 'set-keyboard-offset'; id?: number; offsetY: number }
   | { type: 'resize'; id?: number; cols: number; rows: number }
   | { type: 'reflow'; id?: number; cols: number; rows: number }
   | { type: 'clear'; id?: number }

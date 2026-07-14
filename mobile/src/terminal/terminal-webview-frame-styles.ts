@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native'
+import { StyleSheet, type ViewStyle } from 'react-native'
 import { colors } from '../theme/mobile-theme'
 
 export const TERMINAL_WEBVIEW_FRAME_STYLES = StyleSheet.create({
@@ -11,3 +11,7 @@ export const TERMINAL_WEBVIEW_FRAME_STYLES = StyleSheet.create({
     backgroundColor: colors.terminalBg
   }
 })
+
+export function terminalWebViewBackgroundStyle(backgroundColor?: string): ViewStyle | undefined {
+  return backgroundColor ? { backgroundColor } : undefined
+}

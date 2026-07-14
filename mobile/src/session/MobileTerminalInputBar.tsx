@@ -34,6 +34,7 @@ type MobileTerminalInputBarStyles = {
 
 type MobileTerminalInputBarProps = {
   readonly colors: MobileThemeColors
+  readonly isEinkMode: boolean
   readonly styles: MobileTerminalInputBarStyles
   readonly liveInputEnabled: boolean
   readonly canSend: boolean
@@ -59,6 +60,7 @@ type MobileTerminalInputBarProps = {
 
 export function MobileTerminalInputBar({
   colors,
+  isEinkMode,
   styles,
   liveInputEnabled,
   canSend,
@@ -109,6 +111,13 @@ export function MobileTerminalInputBar({
         onSubmitEditing={liveInputEnabled ? onLiveInputSubmit : () => void onSendCommand()}
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
+        selectionColor={colors.textPrimary}
+        cursorColor={colors.textPrimary}
+        underlineColorAndroid="transparent"
+        // Why: Android's extract editor inherits native dark chrome and is
+        // unreadable on e-ink; keep terminal composition in the themed field.
+        disableFullscreenUI
+        keyboardAppearance={isEinkMode ? 'light' : 'dark'}
         showSoftInputOnFocus
         autoCapitalize="none"
         autoCorrect={liveInputEnabled ? false : autocompleteEnabled}
@@ -126,6 +135,7 @@ export function MobileTerminalInputBar({
         importantForAutofill="no"
       />
       <MobileTerminalInputActions
+        colors={colors}
         canSend={canSend}
         isAttaching={isAttaching}
         dictation={dictation}
@@ -147,7 +157,7 @@ export function MobileTerminalInputBar({
           onPress={() => void onSendCommand()}
           accessibilityLabel="Send command"
         >
-          <ArrowUp size={18} color={colors.textSecondary} strokeWidth={2.5} />
+          <ArrowUp size={18} color={colors.onSurfaceBright} strokeWidth={2.5} />
         </Pressable>
       ) : null}
     </View>

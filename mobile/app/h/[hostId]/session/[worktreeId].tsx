@@ -863,7 +863,7 @@ export default function SessionScreen() {
     created?: string
     warning?: string
   }>()
-  const { colors, chrome } = useMobileTheme()
+  const { colors, chrome, isEinkMode } = useMobileTheme()
   const styles = useMemo(() => createMobileSessionStyles(colors, chrome), [colors, chrome])
   const sessionThemeContextValue = useMemo(() => ({ colors, styles }), [colors, styles])
   const isFolderWorkspaceRoute = worktreeId.startsWith('folder:')
@@ -5087,6 +5087,7 @@ export default function SessionScreen() {
 
                   <MobileTerminalInputBar
                     colors={colors}
+                    isEinkMode={isEinkMode}
                     styles={styles}
                     liveInputEnabled={liveInputEnabled}
                     canSend={canSend}

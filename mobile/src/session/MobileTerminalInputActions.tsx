@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, type StyleProp, type ViewStyle } from 'react-native'
 import { ImagePlus, Mic } from 'lucide-react-native'
-import { colors } from '../theme/mobile-theme'
+import type { MobileThemeColors } from '../theme/mobile-theme-palettes'
 
 type DictationState = {
   readonly isStarting: boolean
@@ -9,6 +9,7 @@ type DictationState = {
 }
 
 type MobileTerminalInputActionsProps = {
+  readonly colors: MobileThemeColors
   readonly canSend: boolean
   readonly isAttaching: boolean
   readonly dictation: DictationState
@@ -27,6 +28,7 @@ type MobileTerminalInputActionsProps = {
 // Image + mic peer actions shared by the live and buffered input bars so both
 // surfaces offer identical multimodal entry points (and the JSX lives once).
 export function MobileTerminalInputActions({
+  colors,
   canSend,
   isAttaching,
   dictation,
