@@ -36,7 +36,7 @@ final class CompanionSession {
 
   init(
     store: HostStore = .live(),
-    makeChannel: @escaping ChannelFactory = { URLSessionWebSocketChannel(url: $0) }
+    makeChannel: @escaping ChannelFactory = { NWWebSocketChannel(url: $0) }
   ) {
     self.store = store
     self.makeChannel = makeChannel
@@ -126,15 +126,54 @@ final class CompanionSession {
     hostStatusById[host.id] = .idle
     statusLine = "Connecting…"
 
-    guard let endpoint = host.candidateEndpoints.first,
-          let url = URL(string: endpoint)
-    else {
+    let endpoints = host.candidateEndpoints
+    guard !endpoints.isEmpty else {
       lastError = "Invalid endpoint"
       connectionState = .disconnected
       statusLine = "Bad endpoint"
       return
     }
 
+    var lastConnectError: Error?
+    for (index, endpoint) in endpoints.enumerated() {
+      guard let url = URL(string: endpoint), url.scheme == "ws" || url.scheme == "wss" else {
+        lastConnectError = OrcaRpcError.handshakeFailed("Bad endpoint URL: \(endpoint)")
+        continue
+      }
+      let remainingHasTailscale = endpoints.dropFirst(index + 1).contains {
+        HostEndpointOrdering.isTailscaleEndpoint($0)
+      }
+      let timeoutMs = HostEndpointOrdering.connectTimeoutMs(
+        for: endpoint,
+        remainingIncludesTailscale: remainingHasTailscale
+      )
+      statusLine = endpoints.count > 1
+        ? "Connecting… (\(index + 1)/\(endpoints.count))"
+        : "Connecting…"
+      do {
+        try await connectOnce(host: host, endpoint: endpoint, url: url, timeoutMs: timeoutMs)
+        return
+      } catch {
+        lastConnectError = error
+        rpcClient?.close()
+        rpcClient = nil
+        // Why: unauthorized means this token is dead on every endpoint — stop thrashing.
+        if case OrcaRpcError.unauthorized = error { break }
+      }
+    }
+
+    lastError = lastConnectError?.localizedDescription ?? "Connect failed"
+    statusLine = "Connect failed"
+    connectionState = .disconnected
+    hostStatusById[host.id] = .idle
+  }
+
+  private func connectOnce(
+    host: HostProfile,
+    endpoint: String,
+    url: URL,
+    timeoutMs: Int
+  ) async throws {
     let channel = makeChannel(url)
     let rpc = OrcaRpcClient(host: host, channel: channel)
     rpcClient = rpc
@@ -145,47 +184,44 @@ final class CompanionSession {
     }
     rpc.start()
 
-    do {
-      try await rpc.waitUntilConnected(timeoutMs: 20_000)
-      statusLine = "Authenticated — probing status…"
-      let statusResponse = try await rpc.sendRequest(method: "status.get", timeoutMs: 15_000)
-      guard statusResponse.ok else {
-        throw OrcaRpcError.handshakeFailed(statusResponse.error?.message ?? "status.get failed")
+    try await rpc.waitUntilConnected(timeoutMs: timeoutMs)
+    statusLine = "Authenticated — probing status…"
+    let statusResponse = try await rpc.sendRequest(method: "status.get", timeoutMs: 15_000)
+    guard statusResponse.ok else {
+      let code = statusResponse.error?.code
+      if code == "unauthorized" {
+        throw OrcaRpcError.unauthorized
       }
-      let snap = HostStatusSnapshot.parse(
-        from: statusResponse.result,
-        runtimeId: statusResponse.runtimeId
-      )
-      if let desktop = snap.protocolVersion {
-        let minClient = snap.minCompatibleClientVersion ?? 0
-        let compat = ProtocolVersion.evaluate(
-          desktopProtocolVersion: desktop,
-          minCompatibleClientVersion: minClient
-        )
-        protocolCompat = compat
-        if compat != .ok {
-          statusLine = "Protocol blocked"
-          lastError = String(describing: compat)
-          hostStatusById[host.id] = .incompatible
-          rpc.markIncompatible()
-          connectionState = .incompatible
-          return
-        }
-      }
-      try? store.updateLastConnected(id: host.id)
-      try? store.promoteEndpoint(id: host.id, endpoint: endpoint)
-      reloadHosts()
-      hostStatusById[host.id] = .connected
-      statusLine = "Connected"
-      await refreshWorktrees()
-    } catch {
-      lastError = error.localizedDescription
-      statusLine = "Connect failed"
-      connectionState = .disconnected
-      hostStatusById[host.id] = .idle
-      rpcClient?.close()
-      rpcClient = nil
+      throw OrcaRpcError.handshakeFailed(statusResponse.error?.message ?? "status.get failed")
     }
+    let snap = HostStatusSnapshot.parse(
+      from: statusResponse.result,
+      runtimeId: statusResponse.runtimeId
+    )
+    if let desktop = snap.protocolVersion {
+      let minClient = snap.minCompatibleClientVersion ?? 0
+      let compat = ProtocolVersion.evaluate(
+        desktopProtocolVersion: desktop,
+        minCompatibleClientVersion: minClient
+      )
+      protocolCompat = compat
+      if compat != .ok {
+        statusLine = "Protocol blocked"
+        lastError = String(describing: compat)
+        hostStatusById[host.id] = .incompatible
+        rpc.markIncompatible()
+        connectionState = .incompatible
+        return
+      }
+    }
+    try? store.updateLastConnected(id: host.id)
+    // Why: remember the working endpoint, but Tailscale stays preferred on next connect via ordering.
+    try? store.promoteEndpoint(id: host.id, endpoint: endpoint)
+    reloadHosts()
+    hostStatusById[host.id] = .connected
+    let via = HostEndpointOrdering.isTailscaleEndpoint(endpoint) ? "Tailscale" : "LAN"
+    statusLine = "Connected via \(via)"
+    await refreshWorktrees()
   }
 
   func refreshWorktrees() async {

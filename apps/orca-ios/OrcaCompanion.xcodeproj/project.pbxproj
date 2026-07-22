@@ -19,6 +19,7 @@
 		3C4C571A03C3C15062C9A503 /* GhosttyRenderCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */; };
 		3D3D1E9AF868089A38620A3C /* E2EECrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */; };
 		4B30509A316439AB14A9E6E1 /* HostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */; };
+		4CCAF0CFAE82F324E33985DF /* TerminalViewportFit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A66DE6AFF79D848DF67B1096 /* TerminalViewportFit.swift */; };
 		5017C7B07721047AA5EC9D64 /* WorktreeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B593BFA6D71E09C4020DFB /* WorktreeSummary.swift */; };
 		50C1146906A021E5EFB8ABDA /* GhosttyRenderCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58528BA3A966FCA34E8D442B /* GhosttyRenderCapture.swift */; };
 		55EFB7DCC1F0D4E7CA39D6E4 /* SessionTerminalTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E940CC7B51A193DE098F5241 /* SessionTerminalTab.swift */; };
@@ -38,9 +39,11 @@
 		84A0E1C34777A682CD9404BE /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F38925794C23CA85977F03 /* HostStore.swift */; };
 		881E0FE77A82B8C60A8BB808 /* TerminalStreamProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D639E201F2904F11FB84717 /* TerminalStreamProtocol.swift */; };
 		899572D3D1473CD3D04D839C /* OrcaRpcClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509AACC87D3084DA2FABF1F3 /* OrcaRpcClient.swift */; };
+		8AFC8846CB32E7865DE6FF08 /* HostEndpointOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D038E7923C024676C33EB4 /* HostEndpointOrdering.swift */; };
 		8B63367A1C62EDE1D20C6561 /* GlyphAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F7DED09DFF48F21F7D62A7 /* GlyphAtlas.swift */; };
 		916DDAE76EE39DA4E83799E7 /* WebSocketChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D63749CF4342FAB63C839F8 /* WebSocketChannel.swift */; };
 		924C34B26405C8E0F77C8C81 /* OrcaRpcClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D5D200B9D7F05863178C0E /* OrcaRpcClientTests.swift */; };
+		96EC0B93C16DF5862FB3219F /* HostEndpointOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08FCF3D565ECC9893B2A745C /* HostEndpointOrderingTests.swift */; };
 		981F0AC7F3F7F67464FB7939 /* SwiftTermEnginePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73011917918A5D77B4164D0D /* SwiftTermEnginePlaceholder.swift */; };
 		9EB2E3C664BC42EE4CA9E6C6 /* HostStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */; };
 		B402F51E7AA5592F88F1AF65 /* AttachRoleController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651D0F900C17BDEBFA8922BE /* AttachRoleController.swift */; };
@@ -76,6 +79,7 @@
 		03F38925794C23CA85977F03 /* HostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStore.swift; sourceTree = "<group>"; };
 		05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStoreTests.swift; sourceTree = "<group>"; };
 		05FB71A4CC46A4FDB01252A2 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		08FCF3D565ECC9893B2A745C /* HostEndpointOrderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostEndpointOrderingTests.swift; sourceTree = "<group>"; };
 		096DBFFEFF62B395533611D7 /* TerminalFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalFrame.swift; sourceTree = "<group>"; };
 		0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EECrypto.swift; sourceTree = "<group>"; };
 		136CD5AC6B3C0DA442E4B7B2 /* WorktreeSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeSummaryTests.swift; sourceTree = "<group>"; };
@@ -111,9 +115,11 @@
 		92B593BFA6D71E09C4020DFB /* WorktreeSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeSummary.swift; sourceTree = "<group>"; };
 		9C3CEACFCB07D719E878D2D6 /* E2EEHandshakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EEHandshakeTests.swift; sourceTree = "<group>"; };
 		9EBCA55A2F50D5FFB802C635 /* MultiHostReloadAndInputGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiHostReloadAndInputGateTests.swift; sourceTree = "<group>"; };
+		A66DE6AFF79D848DF67B1096 /* TerminalViewportFit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewportFit.swift; sourceTree = "<group>"; };
 		B031B47783225ABD4FD3AC9B /* WorkspaceAttachRole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceAttachRole.swift; sourceTree = "<group>"; };
 		BAE51B828D9BD7A7DCFA12F4 /* PairingOffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingOffer.swift; sourceTree = "<group>"; };
 		BC7A4484440787951FDF6752 /* MetalTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalTerminalView.swift; sourceTree = "<group>"; };
+		C3D038E7923C024676C33EB4 /* HostEndpointOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostEndpointOrdering.swift; sourceTree = "<group>"; };
 		C60FBF5BE9322057EB4F0270 /* PairHostSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairHostSheet.swift; sourceTree = "<group>"; };
 		CE6126DECF8001661649EEB8 /* TerminalPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPaneView.swift; sourceTree = "<group>"; };
 		D0423FC017CA52594BA2DB42 /* GhosttyVtEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyVtEngineTests.swift; sourceTree = "<group>"; };
@@ -178,6 +184,7 @@
 				73011917918A5D77B4164D0D /* SwiftTermEnginePlaceholder.swift */,
 				F53599AF91A891F028DF5D6E /* TerminalEngine.swift */,
 				096DBFFEFF62B395533611D7 /* TerminalFrame.swift */,
+				A66DE6AFF79D848DF67B1096 /* TerminalViewportFit.swift */,
 			);
 			path = Terminal;
 			sourceTree = "<group>";
@@ -235,6 +242,7 @@
 		A5C4110AE3DFC44FEF2B38F2 /* Transport */ = {
 			isa = PBXGroup;
 			children = (
+				C3D038E7923C024676C33EB4 /* HostEndpointOrdering.swift */,
 				E24CFD862D55F821E9196BCD /* HostProfile.swift */,
 				54D5B667E26A90171F87185B /* HostRuntimeStatus.swift */,
 				03F38925794C23CA85977F03 /* HostStore.swift */,
@@ -256,6 +264,7 @@
 				9C3CEACFCB07D719E878D2D6 /* E2EEHandshakeTests.swift */,
 				44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */,
 				D0423FC017CA52594BA2DB42 /* GhosttyVtEngineTests.swift */,
+				08FCF3D565ECC9893B2A745C /* HostEndpointOrderingTests.swift */,
 				05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */,
 				9EBCA55A2F50D5FFB802C635 /* MultiHostReloadAndInputGateTests.swift */,
 				F9D5D200B9D7F05863178C0E /* OrcaRpcClientTests.swift */,
@@ -383,6 +392,7 @@
 				57540D3585EEA2BE8F380F4E /* GhosttyVtEngine.swift in Sources */,
 				8B63367A1C62EDE1D20C6561 /* GlyphAtlas.swift in Sources */,
 				4B30509A316439AB14A9E6E1 /* HostDetailView.swift in Sources */,
+				8AFC8846CB32E7865DE6FF08 /* HostEndpointOrdering.swift in Sources */,
 				F7CA11266405B5D2CF3C79FC /* HostProfile.swift in Sources */,
 				26953818EAEFFCDA95378AA1 /* HostRuntimeStatus.swift in Sources */,
 				84A0E1C34777A682CD9404BE /* HostStore.swift in Sources */,
@@ -405,6 +415,7 @@
 				0B5E10BA4518A59209A9BBDE /* TerminalPaneView.swift in Sources */,
 				881E0FE77A82B8C60A8BB808 /* TerminalStreamProtocol.swift in Sources */,
 				05950FD2B017687B8DC96651 /* TerminalSurfaceMountGate.swift in Sources */,
+				4CCAF0CFAE82F324E33985DF /* TerminalViewportFit.swift in Sources */,
 				916DDAE76EE39DA4E83799E7 /* WebSocketChannel.swift in Sources */,
 				3A461D81C53710C25D162C95 /* WorkspaceAttachRole.swift in Sources */,
 				5017C7B07721047AA5EC9D64 /* WorktreeSummary.swift in Sources */,
@@ -420,6 +431,7 @@
 				76C9982B841D3AF6182A3973 /* E2EEHandshakeTests.swift in Sources */,
 				3C4C571A03C3C15062C9A503 /* GhosttyRenderCaptureTests.swift in Sources */,
 				2691DF8AFD8CEEF0407BC2ED /* GhosttyVtEngineTests.swift in Sources */,
+				96EC0B93C16DF5862FB3219F /* HostEndpointOrderingTests.swift in Sources */,
 				9EB2E3C664BC42EE4CA9E6C6 /* HostStoreTests.swift in Sources */,
 				E1877AA2C615C0F62ACDB950 /* MultiHostReloadAndInputGateTests.swift in Sources */,
 				924C34B26405C8E0F77C8C81 /* OrcaRpcClientTests.swift in Sources */,

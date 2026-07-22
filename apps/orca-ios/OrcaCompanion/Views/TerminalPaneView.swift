@@ -21,22 +21,24 @@ struct TerminalPaneView: View {
     ZStack {
       CompanionBackdrop()
       VStack(spacing: 0) {
-        MetalTerminalView(frame: terminalFrame)
+        MetalTerminalView(frame: terminalFrame) { fit in
+          applyViewportFit(fit)
+        }
           .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-          .companionGlassCard(cornerRadius: 16)
+          .companionCard(cornerRadius: 16)
           .padding(.horizontal, 16)
           .padding(.top, 12)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         Text(status)
           .font(.caption2)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(CompanionTheme.mutedForeground)
           .padding(.top, 8)
 
         if let dictationError = session.dictationError {
           Text(dictationError)
             .font(.caption2)
-            .foregroundStyle(.orange)
+            .foregroundStyle(CompanionTheme.destructive)
             .padding(.horizontal, 16)
             .padding(.top, 4)
         }
@@ -45,24 +47,27 @@ struct TerminalPaneView: View {
           TextField(session.allowsTerminalInput ? "Send…" : "Notify — input blocked", text: $input)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .foregroundStyle(CompanionTheme.foreground)
             .padding(12)
-            .companionGlassCard(cornerRadius: 14)
+            .companionCard(cornerRadius: 14)
             .disabled(!session.allowsTerminalInput)
           Button {
             Task { await toggleDictation() }
           } label: {
             Image(systemName: dictationId == nil ? "mic" : "mic.fill")
+              .foregroundStyle(CompanionTheme.primaryForeground)
               .frame(width: 44, height: 44)
           }
-          .companionGlassButton()
+          .companionPrimaryButton()
           .disabled(!session.allowsDictation || dictationBusy)
           Button {
             Task { await sendLine() }
           } label: {
             Image(systemName: "return")
+              .foregroundStyle(CompanionTheme.primaryForeground)
               .frame(width: 44, height: 44)
           }
-          .companionGlassButton()
+          .companionPrimaryButton()
           .disabled(input.isEmpty || !session.allowsTerminalInput)
         }
         .padding(16)
@@ -176,6 +181,18 @@ struct TerminalPaneView: View {
       status = statusLine(for: session.attachRole.role)
     } catch {
       status = "Render: \(error.localizedDescription)"
+    }
+  }
+
+  private func applyViewportFit(_ fit: TerminalViewportFit.Grid) {
+    guard let engine else { return }
+    guard fit.cols != engine.cols || fit.rows != engine.rows else { return }
+    do {
+      try engine.resize(cols: fit.cols, rows: fit.rows)
+      session.attachRole.updateViewport(cols: fit.cols, rows: fit.rows)
+      refresh(engine)
+    } catch {
+      status = "Resize: \(error.localizedDescription)"
     }
   }
 

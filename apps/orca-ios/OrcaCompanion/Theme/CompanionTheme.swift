@@ -1,54 +1,48 @@
 import SwiftUI
 
-/// Liquid Glass chrome for the companion (iOS 26+), with material fallback.
+/// Quiet monochrome chrome aligned with Orca dark tokens (`main.css` `.dark`).
+/// Why: the prior cyan/indigo glass gradient made text unreadable on device.
 enum CompanionTheme {
-  static let accent = Color.cyan
-  static let backgroundTop = Color(red: 0.07, green: 0.09, blue: 0.14)
-  static let backgroundBottom = Color(red: 0.04, green: 0.05, blue: 0.08)
+  static let background = Color(red: 0.039, green: 0.039, blue: 0.039) // #0a0a0a
+  static let foreground = Color(red: 0.980, green: 0.980, blue: 0.980) // #fafafa
+  static let card = Color(red: 0.090, green: 0.090, blue: 0.090) // #171717
+  static let muted = Color(red: 0.149, green: 0.149, blue: 0.149) // #262626
+  static let mutedForeground = Color(red: 0.639, green: 0.639, blue: 0.639) // #a3a3a3
+  static let border = Color(red: 0.227, green: 0.227, blue: 0.227) // #3a3a3a
+  static let primary = Color(red: 0.898, green: 0.898, blue: 0.898) // #e5e5e5
+  static let primaryForeground = Color(red: 0.090, green: 0.090, blue: 0.090) // #171717
+  static let destructive = Color(red: 0.937, green: 0.267, blue: 0.267)
 }
 
 struct CompanionBackdrop: View {
   var body: some View {
-    LinearGradient(
-      colors: [CompanionTheme.backgroundTop, CompanionTheme.backgroundBottom],
-      startPoint: .topLeading,
-      endPoint: .bottomTrailing
-    )
-    .ignoresSafeArea()
-    .overlay {
-      Circle()
-        .fill(CompanionTheme.accent.opacity(0.18))
-        .frame(width: 280, height: 280)
-        .blur(radius: 60)
-        .offset(x: -90, y: -180)
-      Circle()
-        .fill(Color.indigo.opacity(0.22))
-        .frame(width: 320, height: 320)
-        .blur(radius: 70)
-        .offset(x: 110, y: 220)
-    }
+    CompanionTheme.background.ignoresSafeArea()
   }
 }
 
 extension View {
-  @ViewBuilder
-  func companionGlassCard(cornerRadius: CGFloat = 20) -> some View {
-    if #available(iOS 26, *) {
-      self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-    } else {
-      self.background(
-        .ultraThinMaterial,
-        in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+  func companionCard(cornerRadius: CGFloat = 12) -> some View {
+    self
+      .background(CompanionTheme.card, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+          .stroke(CompanionTheme.border, lineWidth: 1)
       )
-    }
   }
 
-  @ViewBuilder
+  func companionPrimaryButton() -> some View {
+    self
+      .foregroundStyle(CompanionTheme.primaryForeground)
+      .background(CompanionTheme.primary, in: Capsule())
+  }
+
+  /// Back-compat name used across views — solid card, not glass.
+  func companionGlassCard(cornerRadius: CGFloat = 12) -> some View {
+    companionCard(cornerRadius: cornerRadius)
+  }
+
+  /// Back-compat name used across views — solid primary pill, not cyan glass.
   func companionGlassButton() -> some View {
-    if #available(iOS 26, *) {
-      self.glassEffect(.regular.interactive().tint(CompanionTheme.accent))
-    } else {
-      self.background(CompanionTheme.accent.opacity(0.25), in: Capsule())
-    }
+    companionPrimaryButton()
   }
 }

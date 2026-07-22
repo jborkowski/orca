@@ -24,7 +24,7 @@ struct TransportRecoveryPolicy: Equatable, Sendable {
     reconnectDelaysMs: [500, 1000, 2000, 4000, 8000, 15_000, 30_000, 60_000],
     giveUpAfterAttempts: 12,
     stableConnectionResetMs: 30_000,
-    handshakeTimeoutMs: 5_000
+    handshakeTimeoutMs: 20_000
   )
 }
 

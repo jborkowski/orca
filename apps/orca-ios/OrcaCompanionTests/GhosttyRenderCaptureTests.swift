@@ -89,3 +89,32 @@ final class TerminalDirtyKindTests: XCTestCase {
   }
 }
 
+final class TerminalViewportFitTests: XCTestCase {
+  func testFitKeepsNaturalCellAspectAndFillsPhoneDrawable() {
+    // ~iPhone drawable at 3x for the terminal pane.
+    let grid = TerminalViewportFit.fit(
+      drawableSize: CGSize(width: 1100, height: 1800),
+      cellPixelWidth: 24,
+      cellPixelHeight: 51
+    )
+    XCTAssertEqual(grid.cellWidth, 24)
+    XCTAssertEqual(grid.cellHeight, 51)
+    XCTAssertEqual(grid.cols, Int(floor(1100.0 / 24.0)))
+    XCTAssertEqual(grid.rows, Int(floor(1800.0 / 51.0)))
+    XCTAssertGreaterThanOrEqual(grid.cols, 20)
+    XCTAssertGreaterThanOrEqual(grid.rows, 8)
+  }
+
+  func testFitDoesNotStretchCellsToFill() {
+    let grid = TerminalViewportFit.fit(
+      drawableSize: CGSize(width: 800, height: 600),
+      cellPixelWidth: 10,
+      cellPixelHeight: 20
+    )
+    XCTAssertEqual(grid.cols, 80)
+    XCTAssertEqual(grid.rows, 30)
+    XCTAssertEqual(grid.originX, 0)
+    XCTAssertEqual(grid.originY, 0)
+  }
+}
+

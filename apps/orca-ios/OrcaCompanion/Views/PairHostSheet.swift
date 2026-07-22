@@ -16,24 +16,26 @@ struct PairHostSheet: View {
         VStack(alignment: .leading, spacing: 16) {
           Text("Paste an `orca://pair?code=…` link from the desktop QR / pair sheet.")
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(CompanionTheme.mutedForeground)
 
           TextField("Host name (optional)", text: $hostName)
             .textInputAutocapitalization(.words)
+            .foregroundStyle(CompanionTheme.foreground)
             .padding(14)
-            .companionGlassCard(cornerRadius: 14)
+            .companionCard(cornerRadius: 14)
 
           TextField("Pairing URL or code", text: $rawOffer, axis: .vertical)
             .lineLimit(4...8)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .foregroundStyle(CompanionTheme.foreground)
             .padding(14)
-            .companionGlassCard(cornerRadius: 14)
+            .companionCard(cornerRadius: 14)
 
           if let errorText {
             Text(errorText)
               .font(.footnote)
-              .foregroundStyle(.red)
+              .foregroundStyle(CompanionTheme.destructive)
           }
 
           Button {
@@ -45,7 +47,7 @@ struct PairHostSheet: View {
               .padding(.vertical, 14)
           }
           .disabled(busy || rawOffer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-          .companionGlassButton()
+          .companionPrimaryButton()
 
           Spacer()
         }

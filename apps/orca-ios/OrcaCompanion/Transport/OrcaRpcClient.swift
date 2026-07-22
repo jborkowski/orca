@@ -5,6 +5,7 @@ enum OrcaRpcError: Error, Equatable, LocalizedError {
   case handshakeFailed(String)
   case requestTimedOut(String)
   case connectionInterrupted
+  case connectionFailed(String)
   case unauthorized
   case protocolFailure(String)
   case retryLimitReached
@@ -22,8 +23,10 @@ enum OrcaRpcError: Error, Equatable, LocalizedError {
       return "Request timed out: \(method)"
     case .connectionInterrupted:
       return "Connection interrupted"
+    case .connectionFailed(let detail):
+      return detail
     case .unauthorized:
-      return "Unauthorized"
+      return "Unauthorized — pairing token rejected. Remove this host and paste a fresh orca://pair link from the desktop."
     case .protocolFailure(let message):
       return message
     case .retryLimitReached:
@@ -604,26 +607,53 @@ final class OrcaRpcClient: @unchecked Sendable {
     }
   }
 
-  private func handleCloseLocked(_: Error?) {
+  private func handleCloseLocked(_ error: Error?) {
     cancelStableResetLocked()
     cancelHandshakeTimeoutLocked()
-    failPendingLocked(OrcaRpcError.connectionInterrupted)
+    let detail = Self.describeClose(error)
+    let connectFailure = OrcaRpcError.connectionFailed(detail)
+    failPendingLocked(connectFailure)
     handshake = nil
 
     if intentionallyClosed {
       if state != .authFailed, state != .incompatible {
         setStateLocked(.disconnected)
       }
-      failConnectWaitersLocked(OrcaRpcError.connectionInterrupted)
+      failConnectWaitersLocked(connectFailure)
       return
     }
 
     if state == .authFailed || state == .incompatible {
-      failConnectWaitersLocked(OrcaRpcError.connectionInterrupted)
+      failConnectWaitersLocked(connectFailure)
       return
     }
 
+    // Why: mid-handshake drop should fail the waiter with the real reason, not silent reconnect only.
+    if state == .connecting || state == .handshaking {
+      failConnectWaitersLocked(connectFailure)
+    }
+
     scheduleReconnectLocked()
+  }
+
+  private static func describeClose(_ error: Error?) -> String {
+    guard let error else { return "Connection interrupted" }
+    let ns = error as NSError
+    if let urlError = error as? URLError {
+      switch urlError.code {
+      case .timedOut:
+        return "Timed out reaching host — is Orca running and Tailscale/LAN up?"
+      case .notConnectedToInternet, .networkConnectionLost:
+        return "Network lost while connecting"
+      case .cannotConnectToHost, .dnsLookupFailed:
+        return "Cannot reach \(urlError.failingURL?.absoluteString ?? "host") — check Tailscale/VPN"
+      case .secureConnectionFailed:
+        return "TLS failed for WebSocket"
+      default:
+        break
+      }
+    }
+    return ns.localizedDescription.isEmpty ? "Connection interrupted" : ns.localizedDescription
   }
 
   private func nextIdLocked() -> String {

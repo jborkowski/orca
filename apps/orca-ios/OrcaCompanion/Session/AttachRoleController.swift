@@ -79,6 +79,16 @@ final class AttachRoleController {
     resubscribe()
   }
 
+  /// Refit subscribe viewport when the Metal surface measures a new cols×rows.
+  func updateViewport(cols: Int, rows: Int) {
+    guard var target, target.cols != cols || target.rows != rows else { return }
+    target.cols = cols
+    target.rows = rows
+    self.target = target
+    guard rpcClient != nil, onEvent != nil else { return }
+    resubscribe()
+  }
+
   // MARK: - Private
 
   private func unbindSubscriptionOnly() {

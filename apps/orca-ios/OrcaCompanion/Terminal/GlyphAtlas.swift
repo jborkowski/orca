@@ -21,6 +21,8 @@ final class GlyphAtlas {
   private let atlasSize: Int
   private(set) var generation = 0
 
+  /// - Parameter pointSize: raster size in atlas pixels (use `13 * screen.scale`
+  ///   so 13pt glyphs stay crisp on Retina drawables).
   init?(device: MTLDevice, pointSize: CGFloat = 13, atlasSize: Int = 2048) {
     self.device = device
     self.pointSize = pointSize
@@ -155,18 +157,19 @@ final class GlyphAtlas {
       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { return nil }
 
+    // Why: CG bitmap origin is bottom-left. Flip once to top-left so Metal
+    // samples (v=0 at texture top) match upright glyphs without a second UV flip.
     ctx.translateBy(x: 0, y: CGFloat(h))
     ctx.scaleBy(x: 1, y: -1)
     ctx.clear(CGRect(x: 0, y: 0, width: w, height: h))
-    ctx.setFillColor(UIColor.clear.cgColor)
-    ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
 
     let attr = NSAttributedString(string: text, attributes: shapedAttributes())
     // CTTypesetter → CTLine so ligature substitution runs through the shaper.
     let typesetter = CTTypesetterCreateWithAttributedString(attr)
     let line = CTTypesetterCreateLine(typesetter, CFRange(location: 0, length: attr.length))
-    let ascent = drawingFont().ascender
-    ctx.textPosition = CGPoint(x: 1, y: CGFloat(h) - ascent - 2)
+    let font = drawingFont()
+    // Baseline from the top in the flipped CTM (not `h - ascent` — that double-counts).
+    ctx.textPosition = CGPoint(x: 1, y: font.ascender + 1)
     CTLineDraw(line, ctx)
 
     // Mono glyphs often land as white RGB; ensure alpha from coverage if needed.

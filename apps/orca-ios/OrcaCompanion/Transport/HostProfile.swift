@@ -11,14 +11,11 @@ struct HostProfile: Equatable, Sendable, Codable {
   var lastConnected: TimeInterval
 
   var candidateEndpoints: [String] {
-    var seen = Set<String>()
-    var out: [String] = []
-    for item in [endpoint] + endpoints {
-      if seen.insert(item).inserted {
-        out.append(item)
-      }
-    }
-    return out
+    HostEndpointOrdering.orderedCandidates(
+      primary: endpoint,
+      extras: endpoints,
+      preferTailscale: true
+    )
   }
 
   static func fromPairing(_ offer: PairingOffer, name: String, id: String = UUID().uuidString) -> HostProfile {

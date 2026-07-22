@@ -10,6 +10,8 @@ struct OrcaCompanionApp: App {
     WindowGroup {
       RootView()
         .environment(session)
+        .preferredColorScheme(.dark)
+        .tint(CompanionTheme.foreground)
     }
     .onChange(of: scenePhase) { _, phase in
       // Why: background → role=notify (no glyph stream); foreground → interactive + snapshot.

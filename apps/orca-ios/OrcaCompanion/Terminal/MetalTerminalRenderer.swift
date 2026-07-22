@@ -1,6 +1,7 @@
 import Metal
 import MetalKit
 import simd
+import UIKit
 
 struct TerminalCellVertex {
   var position: SIMD2<Float>
@@ -24,12 +25,18 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
   private var lastCursorCol: Int?
   private var lastCursorRow: Int?
   private(set) var frame: TerminalFrame?
+  private(set) var lastLayout: TerminalViewportFit.Grid?
+
+  var cellPixelWidth: Int { atlas.cellPixelWidth }
+  var cellPixelHeight: Int { atlas.cellPixelHeight }
 
   init?(mtkView: MTKView) {
     guard let device = mtkView.device ?? MTLCreateSystemDefaultDevice(),
-          let queue = device.makeCommandQueue(),
-          let atlas = GlyphAtlas(device: device)
+          let queue = device.makeCommandQueue()
     else { return nil }
+    // Why: atlas is authored in pixels; match Retina drawable so 13pt stays 13pt.
+    let pointSize = 13 * UIScreen.main.scale
+    guard let atlas = GlyphAtlas(device: device, pointSize: pointSize) else { return nil }
     self.device = device
     self.queue = queue
     self.atlas = atlas
@@ -77,6 +84,14 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     mtkView.delegate = self
   }
 
+  func layoutGrid(for drawableSize: CGSize) -> TerminalViewportFit.Grid {
+    TerminalViewportFit.fit(
+      drawableSize: drawableSize,
+      cellPixelWidth: atlas.cellPixelWidth,
+      cellPixelHeight: atlas.cellPixelHeight
+    )
+  }
+
   func update(frame: TerminalFrame, drawableSize: CGSize) {
     let sizeChanged = drawableSize != lastDrawableSize
     if atlas.generation != atlasGeneration {
@@ -97,11 +112,21 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
       || vertexCount == 0
       || frame.dirty == .full
       || atlas.generation != atlasGeneration
+      || lastLayout?.cols != frame.cols
+      || lastLayout?.rows != frame.rows
 
     self.frame = frame
     lastDrawableSize = drawableSize
     lastCursorCol = frame.cursorCol
     lastCursorRow = frame.cursorRow
+    lastLayout = TerminalViewportFit.Grid(
+      cols: frame.cols,
+      rows: frame.rows,
+      cellWidth: Float(atlas.cellPixelWidth),
+      cellHeight: Float(atlas.cellPixelHeight),
+      originX: max(0, (Float(drawableSize.width) - Float(frame.cols) * Float(atlas.cellPixelWidth)) * 0.5),
+      originY: max(0, (Float(drawableSize.height) - Float(frame.rows) * Float(atlas.cellPixelHeight)) * 0.5)
+    )
 
     if forceFull {
       rebuildVertices(drawableSize: drawableSize)
@@ -138,8 +163,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     row: Int,
     cell: TerminalCell,
     frame: TerminalFrame,
-    cellW: Float,
-    cellH: Float,
+    layout: TerminalViewportFit.Grid,
     drawableSize: CGSize
   ) {
     func ndc(_ px: Float, _ py: Float) -> SIMD2<Float> {
@@ -149,23 +173,21 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     }
 
     let span = max(cell.width, 1)
-    let x0 = Float(col) * cellW
-    let y0 = Float(row) * cellH
-    let x1 = x0 + cellW * Float(span)
-    let y1 = y0 + cellH
+    let x0 = layout.originX + Float(col) * layout.cellWidth
+    let y0 = layout.originY + Float(row) * layout.cellHeight
+    let x1 = x0 + layout.cellWidth * Float(span)
+    let y1 = y0 + layout.cellHeight
     let p0 = ndc(x0, y0)
     let p1 = ndc(x1, y0)
     let p2 = ndc(x0, y1)
     let p3 = ndc(x1, y1)
 
-    let genBefore = atlas.generation
     var uvOrigin = SIMD2<Float>(-1, -1)
     var uvSize = SIMD2<Float>(0, 0)
     if !cell.text.isEmpty, let uv = atlas.uv(for: cell.text, cellColumns: span) {
       uvOrigin = uv.origin
       uvSize = uv.size
     }
-    _ = genBefore // wrap detected by caller via atlas.generation
 
     var fg = cell.foreground.float4
     var bg = cell.background.float4
@@ -195,6 +217,20 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     ptr[base + 5] = TerminalCellVertex(position: p2, uv: SIMD2(u0, v1), fg: fg, bg: bg)
   }
 
+  private func currentLayout(drawableSize: CGSize, frame: TerminalFrame) -> TerminalViewportFit.Grid {
+    if let lastLayout, lastLayout.cols == frame.cols, lastLayout.rows == frame.rows {
+      return lastLayout
+    }
+    return TerminalViewportFit.Grid(
+      cols: frame.cols,
+      rows: frame.rows,
+      cellWidth: Float(atlas.cellPixelWidth),
+      cellHeight: Float(atlas.cellPixelHeight),
+      originX: max(0, (Float(drawableSize.width) - Float(frame.cols) * Float(atlas.cellPixelWidth)) * 0.5),
+      originY: max(0, (Float(drawableSize.height) - Float(frame.rows) * Float(atlas.cellPixelHeight)) * 0.5)
+    )
+  }
+
   private func rebuildVertices(drawableSize: CGSize) {
     guard let frame, drawableSize.width > 1, drawableSize.height > 1 else {
       vertexCount = 0
@@ -203,8 +239,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     ensureVertexBuffer(cellCount: frame.cols * frame.rows)
     guard let buffer = vertexBuffer else { return }
     let ptr = buffer.contents().bindMemory(to: TerminalCellVertex.self, capacity: vertexCapacity)
-    let cellW = Float(drawableSize.width) / Float(frame.cols)
-    let cellH = Float(drawableSize.height) / Float(frame.rows)
+    let layout = currentLayout(drawableSize: drawableSize, frame: frame)
 
     for row in 0 ..< frame.rows {
       for col in 0 ..< frame.cols {
@@ -216,8 +251,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
           row: row,
           cell: cell,
           frame: frame,
-          cellW: cellW,
-          cellH: cellH,
+          layout: layout,
           drawableSize: drawableSize
         )
       }
@@ -228,8 +262,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     ensureVertexBuffer(cellCount: frame.cols * frame.rows)
     guard let buffer = vertexBuffer else { return }
     let ptr = buffer.contents().bindMemory(to: TerminalCellVertex.self, capacity: vertexCapacity)
-    let cellW = Float(drawableSize.width) / Float(frame.cols)
-    let cellH = Float(drawableSize.height) / Float(frame.rows)
+    let layout = currentLayout(drawableSize: drawableSize, frame: frame)
 
     for row in rows {
       guard row >= 0, row < frame.rows else { continue }
@@ -242,8 +275,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
           row: row,
           cell: cell,
           frame: frame,
-          cellW: cellW,
-          cellH: cellH,
+          layout: layout,
           drawableSize: drawableSize
         )
       }
