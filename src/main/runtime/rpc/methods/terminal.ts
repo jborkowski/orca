@@ -26,6 +26,11 @@ import {
 } from '../../../../shared/terminal-input'
 import { measureClipboardTextByteLength } from '../../../../shared/clipboard-text'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
+import {
+  WorkspaceAttachClientRoleSchema,
+  isInteractiveAttachRole,
+  parseWorkspaceAttachClientRole
+} from '../../../../shared/workspace-attach'
 import { isTerminalQueryReply } from '../../../../shared/terminal-query-reply'
 import {
   EMPTY_TERMINAL_REPLY_QUERY_SCAN_STATE,
@@ -907,7 +912,15 @@ const TerminalSubscribe = TerminalHandle.extend({
       terminalBinaryStream: z.literal(1).optional(),
       desktopViewportClaims: z.literal(1).optional()
     })
-    .optional()
+    .optional(),
+  // Why: 'interactive' (default, == today for omitted/missing) is a live
+  // view — registers as a remote view subscriber (eyes; participates in
+  // query-authority yield) and streams output. 'notify' watches without
+  // eyes: no view-subscriber registration (main model keeps query
+  // authority) and no continuous output stream (no scrollback-streaming
+  // energy cost). Shared attach-role contract; see workspace-attach.ts and
+  // terminal-query-authority.md.
+  role: WorkspaceAttachClientRoleSchema.optional()
 })
 
 const TerminalMultiplex = z.object({})
@@ -2356,6 +2369,11 @@ export const TERMINAL_METHODS: RpcAnyMethod[] = [
       let leaf = runtime.resolveLeafForHandle(params.terminal)
       const isMobile = params.client?.type === 'mobile'
       const useBinaryStream = params.capabilities?.terminalBinaryStream === 1 && Boolean(sendBinary)
+      // Why: notify subscribers watch without eyes — they must not register
+      // as a remote view subscriber (main keeps query authority) nor attach
+      // the continuous output stream. Missing/invalid role resolves to
+      // interactive (today's behavior) via the shared attach-role contract.
+      const notifyOnly = !isInteractiveAttachRole(parseWorkspaceAttachClientRole(params.role))
 
       // Why: the left pane's PTY spawns asynchronously after the tab is created.
       // Mobile clients that subscribe before the PTY is ready would get a bare
@@ -2466,21 +2484,27 @@ export const TERMINAL_METHODS: RpcAnyMethod[] = [
             displayMode,
             seq
           })
-          outputBatcher = createTerminalOutputBatcher((chunk) => {
-            emit({ type: 'data', chunk })
-          })
-          const unsubscribeStreamData = runtime.subscribeToTerminalData(ptyId, (data) => {
-            outputBatcher?.push(data)
-          })
-          // Why: this legacy JSON stream can feed a live xterm view too
-          // (older web/desktop subscribers), so it conservatively registers
-          // as a remote view subscriber. For read-only watchers the cost is
-          // a withheld model reply — the pre-Phase-5 status quo — which is
-          // strictly safer than a double reply under a view consumer.
-          const releaseViewSubscriber = runtime.registerRemoteTerminalViewSubscriber(ptyId)
-          unsubscribeData = () => {
-            releaseViewSubscriber()
-            unsubscribeStreamData()
+          // Why: notify subscribers skip the live output stream and view-
+          // subscriber registration entirely, so the main model keeps query
+          // authority and no scrollback is streamed. Interactive keeps the
+          // legacy behavior below. (Phase 2 notify push channel is follow-up.)
+          if (!notifyOnly) {
+            outputBatcher = createTerminalOutputBatcher((chunk) => {
+              emit({ type: 'data', chunk })
+            })
+            const unsubscribeStreamData = runtime.subscribeToTerminalData(ptyId, (data) => {
+              outputBatcher?.push(data)
+            })
+            // Why: this legacy JSON stream can feed a live xterm view too
+            // (older web/desktop subscribers), so it conservatively registers
+            // as a remote view subscriber. For read-only watchers the cost is
+            // a withheld model reply — the pre-Phase-5 status quo — which is
+            // strictly safer than a double reply under a view consumer.
+            const releaseViewSubscriber = runtime.registerRemoteTerminalViewSubscriber(ptyId)
+            unsubscribeData = () => {
+              releaseViewSubscriber()
+              unsubscribeStreamData()
+            }
           }
           unsubscribeFit = runtime.subscribeToFitOverrideChanges(ptyId, (event) => {
             outputBatcher?.flush()
@@ -2702,53 +2726,62 @@ export const TERMINAL_METHODS: RpcAnyMethod[] = [
               .catch(() => false)
           }
         }) ?? (() => {})
-      const unsubscribeStreamData = runtime.subscribeToTerminalData(ptyId, (data, meta) => {
-        if (closed) {
-          return
-        }
-        if (buffering) {
-          const rawLength = meta?.rawLength
-          if (
-            typeof meta?.seq === 'number' &&
-            typeof rawLength === 'number' &&
-            rawLength === data.length
-          ) {
-            const scan = scanTerminalReplyQuerySequences(
-              data,
-              meta.seq - rawLength,
-              pendingQueryScanState
-            )
-            pendingQueryScanState = scan.state
-            for (const query of scan.queries) {
-              if (pendingQueryChars + query.data.length > TERMINAL_QUERY_REPLAY_MAX_CHARS) {
-                pendingQueryOverflowed = true
-                break
-              }
-              pendingQuerySequences.push(query)
-              pendingQueryChars += query.data.length
+      // Why: notify subscribers do not attach the continuous output stream, so
+      // no scrollback bytes are streamed. Interactive keeps buffering the live
+      // data below. unsubscribeStreamData stays balanced (no-op for notify).
+      const unsubscribeStreamData = notifyOnly
+        ? (): void => {}
+        : runtime.subscribeToTerminalData(ptyId, (data, meta) => {
+            if (closed) {
+              return
             }
-          } else {
-            pendingQueryScanState = EMPTY_TERMINAL_REPLY_QUERY_SCAN_STATE
-          }
-          const remainingBudget = Math.max(
-            1,
-            TERMINAL_MULTIPLEX_PENDING_MAX_BYTES - pendingOutputBytes
-          )
-          const measurement = measureTerminalStreamByteLength(data, {
-            stopAfterBytes: remainingBudget
+            if (buffering) {
+              const rawLength = meta?.rawLength
+              if (
+                typeof meta?.seq === 'number' &&
+                typeof rawLength === 'number' &&
+                rawLength === data.length
+              ) {
+                const scan = scanTerminalReplyQuerySequences(
+                  data,
+                  meta.seq - rawLength,
+                  pendingQueryScanState
+                )
+                pendingQueryScanState = scan.state
+                for (const query of scan.queries) {
+                  if (pendingQueryChars + query.data.length > TERMINAL_QUERY_REPLAY_MAX_CHARS) {
+                    pendingQueryOverflowed = true
+                    break
+                  }
+                  pendingQuerySequences.push(query)
+                  pendingQueryChars += query.data.length
+                }
+              } else {
+                pendingQueryScanState = EMPTY_TERMINAL_REPLY_QUERY_SCAN_STATE
+              }
+              const remainingBudget = Math.max(
+                1,
+                TERMINAL_MULTIPLEX_PENDING_MAX_BYTES - pendingOutputBytes
+              )
+              const measurement = measureTerminalStreamByteLength(data, {
+                stopAfterBytes: remainingBudget
+              })
+              pendingOutput.push({ data, bytes: measurement.byteLength, meta })
+              pendingOutputBytes += measurement.byteLength
+              const trimmed = trimPendingOutputToBudget(pendingOutput, pendingOutputBytes)
+              pendingOutputBytes = trimmed.bytes
+              pendingOutputOverflowed ||= trimmed.overflowed
+              return
+            }
+            outputBatcher?.push(data, meta)
           })
-          pendingOutput.push({ data, bytes: measurement.byteLength, meta })
-          pendingOutputBytes += measurement.byteLength
-          const trimmed = trimPendingOutputToBudget(pendingOutput, pendingOutputBytes)
-          pendingOutputBytes = trimmed.bytes
-          pendingOutputOverflowed ||= trimmed.overflowed
-          return
-        }
-        outputBatcher?.push(data, meta)
-      })
       // Why: live bytes must be captured before mobile fit awaits. Registering
       // mobile presence first would suppress main while no view held the query.
-      const releaseViewSubscriber = runtime.registerRemoteTerminalViewSubscriber(ptyId)
+      // Notify subscribers skip registration so the main model keeps query
+      // authority (terminal-query-authority.md); release stays balanced.
+      const releaseViewSubscriber = notifyOnly
+        ? (): void => {}
+        : runtime.registerRemoteTerminalViewSubscriber(ptyId)
       unsubscribeData = () => {
         releaseViewSubscriber()
         unsubscribeStreamData()
