@@ -1,0 +1,66 @@
+name: OrcaCompanion
+options:
+  bundleIdPrefix: dev.orca
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+packages:
+  Sodium:
+    url: https://github.com/jedisct1/swift-sodium
+    from: 0.9.1
+targets:
+  OrcaCompanion:
+    type: application
+    platform: iOS
+    sources:
+      - path: OrcaCompanion
+    dependencies:
+      - framework: Vendor/ghostty-vt.xcframework
+        embed: false
+      - package: Sodium
+        product: Sodium
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: CoreText.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.orca.companion.swift
+        PRODUCT_NAME: OrcaCompanion
+        INFOPLIST_KEY_CFBundleDisplayName: Orca Companion (Dev)
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        INFOPLIST_KEY_NSCameraUsageDescription: Scan the Orca desktop pairing QR code.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to your Orca desktop on the local network.
+        GENERATE_INFOPLIST_FILE: true
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        OTHER_LDFLAGS: ["$(inherited)", "-lc++"]
+        SWIFT_INCLUDE_PATHS: "$(inherited)"
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/Vendor"
+        SYSTEM_FRAMEWORK_SEARCH_PATHS: "$(inherited)"
+    info:
+      path: OrcaCompanion/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Connect to your Orca desktop on the local network.
+    scheme:
+      testTargets:
+        - OrcaCompanionTests
+  OrcaCompanionTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: OrcaCompanionTests
+    dependencies:
+      - target: OrcaCompanion
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.orca.companion.swift.tests
+        GENERATE_INFOPLIST_FILE: true

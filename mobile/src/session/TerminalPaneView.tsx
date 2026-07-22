@@ -7,8 +7,13 @@ import type {
   TerminalModes,
   TerminalWebViewHandle
 } from '../terminal/terminal-webview-contract'
+import { shouldMountTerminalPane } from '../terminal/terminal-single-surface-park'
 import { useMobileTheme } from '../theme/mobile-theme-context'
 import { resolveMobileTerminalTheme } from '../theme/resolve-mobile-terminal-theme'
+
+// Re-exported for call sites that import the flag from the pane; the source of
+// truth (and its default-OFF live-safety invariant) lives in the pure park module.
+export { SINGLE_SURFACE_TERMINAL_PARK_ENABLED } from '../terminal/terminal-single-surface-park'
 
 type TerminalPaneViewProps = {
   handle: string
@@ -66,10 +71,14 @@ export function TerminalPaneView({
     [handle, onRef]
   )
 
+  if (!shouldMountTerminalPane(active)) {
+    return null
+  }
+
   return (
     <View
-      // Why: inactive terminal WebViews stay mounted to preserve terminal state,
-      // while touch and visibility are disabled until the tab is active again.
+      // Why: when park is off, inactive WebViews stay mounted to preserve terminal
+      // state while touch/visibility are disabled — matches shipped Orca mobile.
       pointerEvents={active ? 'auto' : 'none'}
       style={[styles.terminalPane, !active && styles.terminalPaneHidden]}
     >

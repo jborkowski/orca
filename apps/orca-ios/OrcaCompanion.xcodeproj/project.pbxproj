@@ -1,0 +1,723 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		05950FD2B017687B8DC96651 /* TerminalSurfaceMountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872F6FA5EE7C28823693AA52 /* TerminalSurfaceMountGate.swift */; };
+		0B5E10BA4518A59209A9BBDE /* TerminalPaneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6126DECF8001661649EEB8 /* TerminalPaneView.swift */; };
+		2191B577DED8B0EF3C724301 /* ProtocolVersionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 677873A86843AFE426D96054 /* ProtocolVersionTests.swift */; };
+		2691DF8AFD8CEEF0407BC2ED /* GhosttyVtEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0423FC017CA52594BA2DB42 /* GhosttyVtEngineTests.swift */; };
+		26953818EAEFFCDA95378AA1 /* HostRuntimeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D5B667E26A90171F87185B /* HostRuntimeStatus.swift */; };
+		2A9820AEA9E62D8D7C005470 /* E2EECryptoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 781CA529A87CF30C20492176 /* E2EECryptoTests.swift */; };
+		2E647D74CAF56872B237E8CA /* E2EEHandshake.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBB546AA66324B5030E8C6BD /* E2EEHandshake.swift */; };
+		3A461D81C53710C25D162C95 /* WorkspaceAttachRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B031B47783225ABD4FD3AC9B /* WorkspaceAttachRole.swift */; };
+		3ADC82AD46E53951A5E12AE8 /* MetalTerminalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6DC8D2BC4457A655F87884 /* MetalTerminalRenderer.swift */; };
+		3C4C571A03C3C15062C9A503 /* GhosttyRenderCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */; };
+		3D3D1E9AF868089A38620A3C /* E2EECrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */; };
+		4B30509A316439AB14A9E6E1 /* HostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */; };
+		5017C7B07721047AA5EC9D64 /* WorktreeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B593BFA6D71E09C4020DFB /* WorktreeSummary.swift */; };
+		50C1146906A021E5EFB8ABDA /* GhosttyRenderCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58528BA3A966FCA34E8D442B /* GhosttyRenderCapture.swift */; };
+		55EFB7DCC1F0D4E7CA39D6E4 /* SessionTerminalTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E940CC7B51A193DE098F5241 /* SessionTerminalTab.swift */; };
+		57540D3585EEA2BE8F380F4E /* GhosttyVtEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C59422B95FC207929604F4 /* GhosttyVtEngine.swift */; };
+		585024C2A5CA56627583AF0C /* TerminalStreamProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFA410E720FCB26BEE51D4B /* TerminalStreamProtocolTests.swift */; };
+		59BA55E635AFC6693F1AE85A /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 719529D164A507A28C76B77E /* Shaders.metal */; };
+		60183F4AFEE885BAD642F6EC /* WorktreeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 136CD5AC6B3C0DA442E4B7B2 /* WorktreeSummaryTests.swift */; };
+		6128DEEAB9DA7E8B370088FE /* PairingOffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAE51B828D9BD7A7DCFA12F4 /* PairingOffer.swift */; };
+		738D6F64A1BDDAD503B92309 /* SpeechDictationErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84775D1A67321A7E665C55EC /* SpeechDictationErrorTests.swift */; };
+		75475771063F614A797E70D5 /* TerminalFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096DBFFEFF62B395533611D7 /* TerminalFrame.swift */; };
+		7696398D33AA1B1959F82D39 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DC9F690B7F71E5623C7D7A2 /* CoreText.framework */; };
+		76C9982B841D3AF6182A3973 /* E2EEHandshakeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C3CEACFCB07D719E878D2D6 /* E2EEHandshakeTests.swift */; };
+		779F56FC0154C7EB5E5C109B /* MetalTerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7A4484440787951FDF6752 /* MetalTerminalView.swift */; };
+		78F2DF3CDC803D54C185B633 /* TerminalEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53599AF91A891F028DF5D6E /* TerminalEngine.swift */; };
+		7AFA68582004CF601DCEE86D /* PairingOfferParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46E62C7E38A302FDD55B2 /* PairingOfferParserTests.swift */; };
+		8398E69597A74D0D941151CA /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ADD29FB7F70AE3F233C0FDF /* KeychainStore.swift */; };
+		84A0E1C34777A682CD9404BE /* HostStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F38925794C23CA85977F03 /* HostStore.swift */; };
+		881E0FE77A82B8C60A8BB808 /* TerminalStreamProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D639E201F2904F11FB84717 /* TerminalStreamProtocol.swift */; };
+		899572D3D1473CD3D04D839C /* OrcaRpcClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509AACC87D3084DA2FABF1F3 /* OrcaRpcClient.swift */; };
+		8B63367A1C62EDE1D20C6561 /* GlyphAtlas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F7DED09DFF48F21F7D62A7 /* GlyphAtlas.swift */; };
+		916DDAE76EE39DA4E83799E7 /* WebSocketChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D63749CF4342FAB63C839F8 /* WebSocketChannel.swift */; };
+		924C34B26405C8E0F77C8C81 /* OrcaRpcClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D5D200B9D7F05863178C0E /* OrcaRpcClientTests.swift */; };
+		981F0AC7F3F7F67464FB7939 /* SwiftTermEnginePlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73011917918A5D77B4164D0D /* SwiftTermEnginePlaceholder.swift */; };
+		9EB2E3C664BC42EE4CA9E6C6 /* HostStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */; };
+		B402F51E7AA5592F88F1AF65 /* AttachRoleController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651D0F900C17BDEBFA8922BE /* AttachRoleController.swift */; };
+		B7A67861C2696C1FA988B463 /* RpcTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4708BF781F5F3415C4AA453C /* RpcTypes.swift */; };
+		B80452AB28FEC809E5E4FD07 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF1775BDF5456DBB9364BA3D /* MetalKit.framework */; };
+		B8FEDFD7EA967D7EEA6DC4C6 /* SpeechDictationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0BB228C526D3E9EC7303770 /* SpeechDictationSession.swift */; };
+		BF8194C89212504D3A74B2E0 /* PairHostSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60FBF5BE9322057EB4F0270 /* PairHostSheet.swift */; };
+		C66FEC89B30C274DA881F285 /* ghostty-vt.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4827E8679E4986956A987749 /* ghostty-vt.xcframework */; };
+		C94CBE5877D88F12DE6AA955 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FB71A4CC46A4FDB01252A2 /* RootView.swift */; };
+		CE7B715E1167FED693F14A81 /* TerminalSurfaceMountGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F24C484C043F3F367F6491 /* TerminalSurfaceMountGateTests.swift */; };
+		D42B0A32579B2AB1969C4FC6 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = 1CB373DCC4633C86D98960FF /* Sodium */; };
+		D49ECFD7ABC6F12B929743E8 /* CompanionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AF2B771FCDB4D7F98B3FA19 /* CompanionSession.swift */; };
+		D7C0629CB66ABA59296E5EE4 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E3C12753EF9CD05EA8A43F5 /* Metal.framework */; };
+		E1877AA2C615C0F62ACDB950 /* MultiHostReloadAndInputGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EBCA55A2F50D5FFB802C635 /* MultiHostReloadAndInputGateTests.swift */; };
+		EB7E633A18E8F477A5F97B24 /* AttachRoleControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD561C5C18DDDD52C43FB30 /* AttachRoleControllerTests.swift */; };
+		F40DBB13B1DE6D0410431DA2 /* CompanionTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A53A15EAA0BD25A12F62D81 /* CompanionTheme.swift */; };
+		F77CE094DB786923F964BE44 /* OrcaCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4669D26163555A65ECECCC7 /* OrcaCompanionApp.swift */; };
+		F7CA11266405B5D2CF3C79FC /* HostProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24CFD862D55F821E9196BCD /* HostProfile.swift */; };
+		FFF6CD60592C28FD3BACA0AE /* ProtocolVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2574D640A219015AA9ACD6F0 /* ProtocolVersion.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F8F8A46435EEC7F3BD5CE11A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C722D2E8AD5F469E6684608 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1168063BFF5C6A6A59AEE119;
+			remoteInfo = OrcaCompanion;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		03F38925794C23CA85977F03 /* HostStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStore.swift; sourceTree = "<group>"; };
+		05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStoreTests.swift; sourceTree = "<group>"; };
+		05FB71A4CC46A4FDB01252A2 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		096DBFFEFF62B395533611D7 /* TerminalFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalFrame.swift; sourceTree = "<group>"; };
+		0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EECrypto.swift; sourceTree = "<group>"; };
+		136CD5AC6B3C0DA442E4B7B2 /* WorktreeSummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeSummaryTests.swift; sourceTree = "<group>"; };
+		17B46E62C7E38A302FDD55B2 /* PairingOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingOfferParserTests.swift; sourceTree = "<group>"; };
+		17C59422B95FC207929604F4 /* GhosttyVtEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyVtEngine.swift; sourceTree = "<group>"; };
+		1ADD29FB7F70AE3F233C0FDF /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		1DC9F690B7F71E5623C7D7A2 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		2574D640A219015AA9ACD6F0 /* ProtocolVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolVersion.swift; sourceTree = "<group>"; };
+		3683B195CC73293AE7F01732 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyRenderCaptureTests.swift; sourceTree = "<group>"; };
+		4708BF781F5F3415C4AA453C /* RpcTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RpcTypes.swift; sourceTree = "<group>"; };
+		4827E8679E4986956A987749 /* ghostty-vt.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "ghostty-vt.xcframework"; path = "Vendor/ghostty-vt.xcframework"; sourceTree = "<group>"; };
+		4AF2B771FCDB4D7F98B3FA19 /* CompanionSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSession.swift; sourceTree = "<group>"; };
+		4DD561C5C18DDDD52C43FB30 /* AttachRoleControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachRoleControllerTests.swift; sourceTree = "<group>"; };
+		4EFA410E720FCB26BEE51D4B /* TerminalStreamProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStreamProtocolTests.swift; sourceTree = "<group>"; };
+		509AACC87D3084DA2FABF1F3 /* OrcaRpcClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaRpcClient.swift; sourceTree = "<group>"; };
+		54D5B667E26A90171F87185B /* HostRuntimeStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostRuntimeStatus.swift; sourceTree = "<group>"; };
+		58528BA3A966FCA34E8D442B /* GhosttyRenderCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyRenderCapture.swift; sourceTree = "<group>"; };
+		5D63749CF4342FAB63C839F8 /* WebSocketChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketChannel.swift; sourceTree = "<group>"; };
+		651D0F900C17BDEBFA8922BE /* AttachRoleController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachRoleController.swift; sourceTree = "<group>"; };
+		677873A86843AFE426D96054 /* ProtocolVersionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolVersionTests.swift; sourceTree = "<group>"; };
+		6D6DC8D2BC4457A655F87884 /* MetalTerminalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalTerminalRenderer.swift; sourceTree = "<group>"; };
+		719529D164A507A28C76B77E /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		73011917918A5D77B4164D0D /* SwiftTermEnginePlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTermEnginePlaceholder.swift; sourceTree = "<group>"; };
+		76F24C484C043F3F367F6491 /* TerminalSurfaceMountGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceMountGateTests.swift; sourceTree = "<group>"; };
+		77F7DED09DFF48F21F7D62A7 /* GlyphAtlas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlyphAtlas.swift; sourceTree = "<group>"; };
+		781CA529A87CF30C20492176 /* E2EECryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EECryptoTests.swift; sourceTree = "<group>"; };
+		7D639E201F2904F11FB84717 /* TerminalStreamProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStreamProtocol.swift; sourceTree = "<group>"; };
+		84775D1A67321A7E665C55EC /* SpeechDictationErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictationErrorTests.swift; sourceTree = "<group>"; };
+		872F6FA5EE7C28823693AA52 /* TerminalSurfaceMountGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceMountGate.swift; sourceTree = "<group>"; };
+		8A53A15EAA0BD25A12F62D81 /* CompanionTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionTheme.swift; sourceTree = "<group>"; };
+		8E3C12753EF9CD05EA8A43F5 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		92B593BFA6D71E09C4020DFB /* WorktreeSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeSummary.swift; sourceTree = "<group>"; };
+		9C3CEACFCB07D719E878D2D6 /* E2EEHandshakeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EEHandshakeTests.swift; sourceTree = "<group>"; };
+		9EBCA55A2F50D5FFB802C635 /* MultiHostReloadAndInputGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiHostReloadAndInputGateTests.swift; sourceTree = "<group>"; };
+		B031B47783225ABD4FD3AC9B /* WorkspaceAttachRole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceAttachRole.swift; sourceTree = "<group>"; };
+		BAE51B828D9BD7A7DCFA12F4 /* PairingOffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingOffer.swift; sourceTree = "<group>"; };
+		BC7A4484440787951FDF6752 /* MetalTerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalTerminalView.swift; sourceTree = "<group>"; };
+		C60FBF5BE9322057EB4F0270 /* PairHostSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairHostSheet.swift; sourceTree = "<group>"; };
+		CE6126DECF8001661649EEB8 /* TerminalPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPaneView.swift; sourceTree = "<group>"; };
+		D0423FC017CA52594BA2DB42 /* GhosttyVtEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyVtEngineTests.swift; sourceTree = "<group>"; };
+		D4669D26163555A65ECECCC7 /* OrcaCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaCompanionApp.swift; sourceTree = "<group>"; };
+		DF1775BDF5456DBB9364BA3D /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDetailView.swift; sourceTree = "<group>"; };
+		E24CFD862D55F821E9196BCD /* HostProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostProfile.swift; sourceTree = "<group>"; };
+		E940CC7B51A193DE098F5241 /* SessionTerminalTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTerminalTab.swift; sourceTree = "<group>"; };
+		EE7C1870AD7413EBFE399CED /* OrcaCompanionTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0BB228C526D3E9EC7303770 /* SpeechDictationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictationSession.swift; sourceTree = "<group>"; };
+		F53599AF91A891F028DF5D6E /* TerminalEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalEngine.swift; sourceTree = "<group>"; };
+		F9D5D200B9D7F05863178C0E /* OrcaRpcClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrcaRpcClientTests.swift; sourceTree = "<group>"; };
+		FBB546AA66324B5030E8C6BD /* E2EEHandshake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EEHandshake.swift; sourceTree = "<group>"; };
+		FEDB642005AE69BBE017DEBE /* OrcaCompanion.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OrcaCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		523DED451FBA4B3E08985F7B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C66FEC89B30C274DA881F285 /* ghostty-vt.xcframework in Frameworks */,
+				D42B0A32579B2AB1969C4FC6 /* Sodium in Frameworks */,
+				D7C0629CB66ABA59296E5EE4 /* Metal.framework in Frameworks */,
+				B80452AB28FEC809E5E4FD07 /* MetalKit.framework in Frameworks */,
+				7696398D33AA1B1959F82D39 /* CoreText.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		41485469CD59322C1B98A164 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FEDB642005AE69BBE017DEBE /* OrcaCompanion.app */,
+				EE7C1870AD7413EBFE399CED /* OrcaCompanionTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4C80ECFBCA2E412027EAB65E /* Session */ = {
+			isa = PBXGroup;
+			children = (
+				651D0F900C17BDEBFA8922BE /* AttachRoleController.swift */,
+				4AF2B771FCDB4D7F98B3FA19 /* CompanionSession.swift */,
+				F0BB228C526D3E9EC7303770 /* SpeechDictationSession.swift */,
+				872F6FA5EE7C28823693AA52 /* TerminalSurfaceMountGate.swift */,
+			);
+			path = Session;
+			sourceTree = "<group>";
+		};
+		7CB20387F6C8C94F20945896 /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				58528BA3A966FCA34E8D442B /* GhosttyRenderCapture.swift */,
+				17C59422B95FC207929604F4 /* GhosttyVtEngine.swift */,
+				77F7DED09DFF48F21F7D62A7 /* GlyphAtlas.swift */,
+				6D6DC8D2BC4457A655F87884 /* MetalTerminalRenderer.swift */,
+				BC7A4484440787951FDF6752 /* MetalTerminalView.swift */,
+				719529D164A507A28C76B77E /* Shaders.metal */,
+				73011917918A5D77B4164D0D /* SwiftTermEnginePlaceholder.swift */,
+				F53599AF91A891F028DF5D6E /* TerminalEngine.swift */,
+				096DBFFEFF62B395533611D7 /* TerminalFrame.swift */,
+			);
+			path = Terminal;
+			sourceTree = "<group>";
+		};
+		7D4905277F99BC1A46294C29 /* OrcaCompanion */ = {
+			isa = PBXGroup;
+			children = (
+				3683B195CC73293AE7F01732 /* Info.plist */,
+				D4669D26163555A65ECECCC7 /* OrcaCompanionApp.swift */,
+				8318C3CCFD62570C98F864B9 /* Protocol */,
+				4C80ECFBCA2E412027EAB65E /* Session */,
+				F771B3796CB95171F20645E8 /* Storage */,
+				7CB20387F6C8C94F20945896 /* Terminal */,
+				F6A6433D84E2BA36B66116B3 /* Theme */,
+				A5C4110AE3DFC44FEF2B38F2 /* Transport */,
+				9BB2600F3B4203EB792E03A2 /* Views */,
+			);
+			path = OrcaCompanion;
+			sourceTree = "<group>";
+		};
+		82DE4D4BF97BEFF83C07E481 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1DC9F690B7F71E5623C7D7A2 /* CoreText.framework */,
+				4827E8679E4986956A987749 /* ghostty-vt.xcframework */,
+				8E3C12753EF9CD05EA8A43F5 /* Metal.framework */,
+				DF1775BDF5456DBB9364BA3D /* MetalKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8318C3CCFD62570C98F864B9 /* Protocol */ = {
+			isa = PBXGroup;
+			children = (
+				0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */,
+				FBB546AA66324B5030E8C6BD /* E2EEHandshake.swift */,
+				BAE51B828D9BD7A7DCFA12F4 /* PairingOffer.swift */,
+				2574D640A219015AA9ACD6F0 /* ProtocolVersion.swift */,
+				B031B47783225ABD4FD3AC9B /* WorkspaceAttachRole.swift */,
+			);
+			path = Protocol;
+			sourceTree = "<group>";
+		};
+		9BB2600F3B4203EB792E03A2 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */,
+				C60FBF5BE9322057EB4F0270 /* PairHostSheet.swift */,
+				05FB71A4CC46A4FDB01252A2 /* RootView.swift */,
+				CE6126DECF8001661649EEB8 /* TerminalPaneView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A5C4110AE3DFC44FEF2B38F2 /* Transport */ = {
+			isa = PBXGroup;
+			children = (
+				E24CFD862D55F821E9196BCD /* HostProfile.swift */,
+				54D5B667E26A90171F87185B /* HostRuntimeStatus.swift */,
+				03F38925794C23CA85977F03 /* HostStore.swift */,
+				509AACC87D3084DA2FABF1F3 /* OrcaRpcClient.swift */,
+				4708BF781F5F3415C4AA453C /* RpcTypes.swift */,
+				E940CC7B51A193DE098F5241 /* SessionTerminalTab.swift */,
+				7D639E201F2904F11FB84717 /* TerminalStreamProtocol.swift */,
+				5D63749CF4342FAB63C839F8 /* WebSocketChannel.swift */,
+				92B593BFA6D71E09C4020DFB /* WorktreeSummary.swift */,
+			);
+			path = Transport;
+			sourceTree = "<group>";
+		};
+		A9ACAB52333D1192E719669D /* OrcaCompanionTests */ = {
+			isa = PBXGroup;
+			children = (
+				4DD561C5C18DDDD52C43FB30 /* AttachRoleControllerTests.swift */,
+				781CA529A87CF30C20492176 /* E2EECryptoTests.swift */,
+				9C3CEACFCB07D719E878D2D6 /* E2EEHandshakeTests.swift */,
+				44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */,
+				D0423FC017CA52594BA2DB42 /* GhosttyVtEngineTests.swift */,
+				05E9659DC4CEF537B1082CFD /* HostStoreTests.swift */,
+				9EBCA55A2F50D5FFB802C635 /* MultiHostReloadAndInputGateTests.swift */,
+				F9D5D200B9D7F05863178C0E /* OrcaRpcClientTests.swift */,
+				17B46E62C7E38A302FDD55B2 /* PairingOfferParserTests.swift */,
+				677873A86843AFE426D96054 /* ProtocolVersionTests.swift */,
+				84775D1A67321A7E665C55EC /* SpeechDictationErrorTests.swift */,
+				4EFA410E720FCB26BEE51D4B /* TerminalStreamProtocolTests.swift */,
+				76F24C484C043F3F367F6491 /* TerminalSurfaceMountGateTests.swift */,
+				136CD5AC6B3C0DA442E4B7B2 /* WorktreeSummaryTests.swift */,
+			);
+			path = OrcaCompanionTests;
+			sourceTree = "<group>";
+		};
+		B0A83F74104AE53291D3F8D2 = {
+			isa = PBXGroup;
+			children = (
+				7D4905277F99BC1A46294C29 /* OrcaCompanion */,
+				A9ACAB52333D1192E719669D /* OrcaCompanionTests */,
+				82DE4D4BF97BEFF83C07E481 /* Frameworks */,
+				41485469CD59322C1B98A164 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F6A6433D84E2BA36B66116B3 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				8A53A15EAA0BD25A12F62D81 /* CompanionTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		F771B3796CB95171F20645E8 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				1ADD29FB7F70AE3F233C0FDF /* KeychainStore.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1168063BFF5C6A6A59AEE119 /* OrcaCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A384D36597A47450C5BE6CB /* Build configuration list for PBXNativeTarget "OrcaCompanion" */;
+			buildPhases = (
+				3B5615F1F076069022CBD26B /* Sources */,
+				523DED451FBA4B3E08985F7B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OrcaCompanion;
+			packageProductDependencies = (
+				1CB373DCC4633C86D98960FF /* Sodium */,
+			);
+			productName = OrcaCompanion;
+			productReference = FEDB642005AE69BBE017DEBE /* OrcaCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F3F17F1374086ABECD0D8142 /* OrcaCompanionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 40B3A7809FD4DD8BB733F339 /* Build configuration list for PBXNativeTarget "OrcaCompanionTests" */;
+			buildPhases = (
+				D8472D9AB377FB494BD50244 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B68AD55830EDEC7112AB00E6 /* PBXTargetDependency */,
+			);
+			name = OrcaCompanionTests;
+			packageProductDependencies = (
+			);
+			productName = OrcaCompanionTests;
+			productReference = EE7C1870AD7413EBFE399CED /* OrcaCompanionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2C722D2E8AD5F469E6684608 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = F401154B72D565D66686271A /* Build configuration list for PBXProject "OrcaCompanion" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B0A83F74104AE53291D3F8D2;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3650EBC8ADF2461E48404EF8 /* XCRemoteSwiftPackageReference "swift-sodium" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 41485469CD59322C1B98A164 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1168063BFF5C6A6A59AEE119 /* OrcaCompanion */,
+				F3F17F1374086ABECD0D8142 /* OrcaCompanionTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3B5615F1F076069022CBD26B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B402F51E7AA5592F88F1AF65 /* AttachRoleController.swift in Sources */,
+				D49ECFD7ABC6F12B929743E8 /* CompanionSession.swift in Sources */,
+				F40DBB13B1DE6D0410431DA2 /* CompanionTheme.swift in Sources */,
+				3D3D1E9AF868089A38620A3C /* E2EECrypto.swift in Sources */,
+				2E647D74CAF56872B237E8CA /* E2EEHandshake.swift in Sources */,
+				50C1146906A021E5EFB8ABDA /* GhosttyRenderCapture.swift in Sources */,
+				57540D3585EEA2BE8F380F4E /* GhosttyVtEngine.swift in Sources */,
+				8B63367A1C62EDE1D20C6561 /* GlyphAtlas.swift in Sources */,
+				4B30509A316439AB14A9E6E1 /* HostDetailView.swift in Sources */,
+				F7CA11266405B5D2CF3C79FC /* HostProfile.swift in Sources */,
+				26953818EAEFFCDA95378AA1 /* HostRuntimeStatus.swift in Sources */,
+				84A0E1C34777A682CD9404BE /* HostStore.swift in Sources */,
+				8398E69597A74D0D941151CA /* KeychainStore.swift in Sources */,
+				3ADC82AD46E53951A5E12AE8 /* MetalTerminalRenderer.swift in Sources */,
+				779F56FC0154C7EB5E5C109B /* MetalTerminalView.swift in Sources */,
+				F77CE094DB786923F964BE44 /* OrcaCompanionApp.swift in Sources */,
+				899572D3D1473CD3D04D839C /* OrcaRpcClient.swift in Sources */,
+				BF8194C89212504D3A74B2E0 /* PairHostSheet.swift in Sources */,
+				6128DEEAB9DA7E8B370088FE /* PairingOffer.swift in Sources */,
+				FFF6CD60592C28FD3BACA0AE /* ProtocolVersion.swift in Sources */,
+				C94CBE5877D88F12DE6AA955 /* RootView.swift in Sources */,
+				B7A67861C2696C1FA988B463 /* RpcTypes.swift in Sources */,
+				55EFB7DCC1F0D4E7CA39D6E4 /* SessionTerminalTab.swift in Sources */,
+				59BA55E635AFC6693F1AE85A /* Shaders.metal in Sources */,
+				B8FEDFD7EA967D7EEA6DC4C6 /* SpeechDictationSession.swift in Sources */,
+				981F0AC7F3F7F67464FB7939 /* SwiftTermEnginePlaceholder.swift in Sources */,
+				78F2DF3CDC803D54C185B633 /* TerminalEngine.swift in Sources */,
+				75475771063F614A797E70D5 /* TerminalFrame.swift in Sources */,
+				0B5E10BA4518A59209A9BBDE /* TerminalPaneView.swift in Sources */,
+				881E0FE77A82B8C60A8BB808 /* TerminalStreamProtocol.swift in Sources */,
+				05950FD2B017687B8DC96651 /* TerminalSurfaceMountGate.swift in Sources */,
+				916DDAE76EE39DA4E83799E7 /* WebSocketChannel.swift in Sources */,
+				3A461D81C53710C25D162C95 /* WorkspaceAttachRole.swift in Sources */,
+				5017C7B07721047AA5EC9D64 /* WorktreeSummary.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D8472D9AB377FB494BD50244 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB7E633A18E8F477A5F97B24 /* AttachRoleControllerTests.swift in Sources */,
+				2A9820AEA9E62D8D7C005470 /* E2EECryptoTests.swift in Sources */,
+				76C9982B841D3AF6182A3973 /* E2EEHandshakeTests.swift in Sources */,
+				3C4C571A03C3C15062C9A503 /* GhosttyRenderCaptureTests.swift in Sources */,
+				2691DF8AFD8CEEF0407BC2ED /* GhosttyVtEngineTests.swift in Sources */,
+				9EB2E3C664BC42EE4CA9E6C6 /* HostStoreTests.swift in Sources */,
+				E1877AA2C615C0F62ACDB950 /* MultiHostReloadAndInputGateTests.swift in Sources */,
+				924C34B26405C8E0F77C8C81 /* OrcaRpcClientTests.swift in Sources */,
+				7AFA68582004CF601DCEE86D /* PairingOfferParserTests.swift in Sources */,
+				2191B577DED8B0EF3C724301 /* ProtocolVersionTests.swift in Sources */,
+				738D6F64A1BDDAD503B92309 /* SpeechDictationErrorTests.swift in Sources */,
+				585024C2A5CA56627583AF0C /* TerminalStreamProtocolTests.swift in Sources */,
+				CE7B715E1167FED693F14A81 /* TerminalSurfaceMountGateTests.swift in Sources */,
+				60183F4AFEE885BAD642F6EC /* WorktreeSummaryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B68AD55830EDEC7112AB00E6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1168063BFF5C6A6A59AEE119 /* OrcaCompanion */;
+			targetProxy = F8F8A46435EEC7F3BD5CE11A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		487554473D90775BD4E21289 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited) $(PROJECT_DIR)/Vendor",
+					"\"Vendor\"",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrcaCompanion/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Orca Companion (Dev)";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the Orca desktop pairing QR code.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Connect to your Orca desktop on the local network.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.orca.companion.swift;
+				PRODUCT_NAME = OrcaCompanion;
+				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = "$(inherited)";
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		538BCA9ACA9AEC148759257F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7A3B03D4B50749EB16DFEBEB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8774996D0D59B4FEA0EBE95F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.orca.companion.swift.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OrcaCompanion.app/OrcaCompanion";
+			};
+			name = Release;
+		};
+		AB6EF664732CA014417FB7D7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.orca.companion.swift.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OrcaCompanion.app/OrcaCompanion";
+			};
+			name = Debug;
+		};
+		ABE94EE8F527FCA56AEA4F1E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited) $(PROJECT_DIR)/Vendor",
+					"\"Vendor\"",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OrcaCompanion/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Orca Companion (Dev)";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the Orca desktop pairing QR code.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Connect to your Orca desktop on the local network.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.orca.companion.swift;
+				PRODUCT_NAME = OrcaCompanion;
+				SDKROOT = iphoneos;
+				SWIFT_INCLUDE_PATHS = "$(inherited)";
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = "$(inherited)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A384D36597A47450C5BE6CB /* Build configuration list for PBXNativeTarget "OrcaCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				487554473D90775BD4E21289 /* Debug */,
+				ABE94EE8F527FCA56AEA4F1E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		40B3A7809FD4DD8BB733F339 /* Build configuration list for PBXNativeTarget "OrcaCompanionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB6EF664732CA014417FB7D7 /* Debug */,
+				8774996D0D59B4FEA0EBE95F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F401154B72D565D66686271A /* Build configuration list for PBXProject "OrcaCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A3B03D4B50749EB16DFEBEB /* Debug */,
+				538BCA9ACA9AEC148759257F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3650EBC8ADF2461E48404EF8 /* XCRemoteSwiftPackageReference "swift-sodium" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jedisct1/swift-sodium";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1CB373DCC4633C86D98960FF /* Sodium */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3650EBC8ADF2461E48404EF8 /* XCRemoteSwiftPackageReference "swift-sodium" */;
+			productName = Sodium;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 2C722D2E8AD5F469E6684608 /* Project object */;
+}

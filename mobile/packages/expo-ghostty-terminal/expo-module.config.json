@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["ExpoGhosttyTerminalModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.ghosttyterminal.ExpoGhosttyTerminalModule"]
+  }
+}

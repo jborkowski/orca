@@ -125,6 +125,11 @@ import {
   recoverActiveTerminalAfterForeground,
   shouldRecoverTerminalOnAppStateChange
 } from '../../../../src/terminal/terminal-foreground-recovery'
+import {
+  TERMINAL_BACKGROUND_TEAR_DOWN_ENABLED,
+  shouldTearDownTerminalOnBackground,
+  tearDownActiveTerminalForBackground
+} from '../../../../src/terminal/terminal-background-lifecycle'
 import { MobileBrowserPane } from '../../../../src/browser/MobileBrowserPane'
 import { normalizeBrowserUrl } from '../../../../src/browser/browser-url'
 import { StatusDot } from '../../../../src/components/StatusDot'
@@ -2566,12 +2571,23 @@ export default function SessionScreen() {
   useEffect(() => {
     let previousAppState: AppStateStatus | null = AppState.currentState
     const sub = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      const shouldTearDown = shouldTearDownTerminalOnBackground(previousAppState, nextAppState)
       const shouldRecover = shouldRecoverTerminalOnAppStateChange(
         previousAppState,
         nextAppState,
         Platform.OS
       )
       previousAppState = nextAppState
+      // Why: gated default-off — enabling unsubscribes the live glyph stream on
+      // background for energy; leave off against a live paired Orca until Phase 1
+      // is opted in. Connection park/revive stays untouched either way.
+      if (TERMINAL_BACKGROUND_TEAR_DOWN_ENABLED && shouldTearDown) {
+        tearDownActiveTerminalForBackground({
+          activeHandleRef,
+          initializedHandlesRef,
+          unsubscribeTerminal
+        })
+      }
       if (!shouldRecover) {
         return
       }

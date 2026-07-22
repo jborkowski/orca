@@ -1,0 +1,10 @@
+# Xcode / XcodeGen
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.swiftpm/
+.build/
+
+# Tip Ghostty VT binary (rehydrate via Scripts/fetch-ghostty-vt.sh)
+Vendor/*.zip
+Vendor/*.xcframework/

@@ -55,8 +55,9 @@ export function recoverActiveTerminalAfterForeground({
   const shouldRecoverActive =
     !!handle && terminalRefs.current.has(handle) && initializedHandlesRef.current.has(handle)
 
-  // Why: inactive terminal WebViews stay mounted with opacity:0; iOS can blank
-  // those backing stores too, so their next activation must accept scrollback.
+  // Why: inactive terminal WebViews may stay mounted with opacity:0 (park flag
+  // off); iOS can blank those backing stores too, so their next activation must
+  // accept scrollback. Clear initialized marks for every still-mounted handle.
   for (const initializedHandle of initializedMountedHandles) {
     initializedHandlesRef.current.delete(initializedHandle)
   }

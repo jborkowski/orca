@@ -1,0 +1,49 @@
+{
+  "name": "@orca/expo-ghostty-terminal",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Native module scaffold that will host Ghostty as the Orca mobile terminal surface",
+  "keywords": [
+    "ExpoGhosttyTerminal",
+    "expo",
+    "expo-ghostty-terminal",
+    "ghostty",
+    "react-native",
+    "terminal"
+  ],
+  "homepage": "https://github.com/stablyai/orca/tree/main/mobile/packages/expo-ghostty-terminal",
+  "bugs": {
+    "url": "https://github.com/stablyai/orca/issues"
+  },
+  "license": "MIT",
+  "author": "Orca contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stablyai/orca.git",
+    "directory": "mobile/packages/expo-ghostty-terminal"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "expo-module clean",
+    "dev": "expo-module build",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "test:unit": "vitest run",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt .",
+    "typecheck": "pnpm --dir ../.. exec tsc --noEmit",
+    "expo-module": "expo-module"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.25",
+    "expo-module-scripts": "^3.5.2",
+    "expo-modules-core": "^2.0.4"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

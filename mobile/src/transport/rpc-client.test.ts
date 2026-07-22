@@ -168,6 +168,46 @@ describe('mobile rpc-client connection timeout', () => {
     client.close()
   })
 
+  it('closes a stalled E2EE handshake so reconnect can run', async () => {
+    const client = connect('ws://desktop.invalid', 'token', 'server-key')
+    const socket = mockSockets[0]!
+
+    socket.open()
+    socket.receive(JSON.stringify({ type: 'e2ee_ready' }))
+    expect(client.getState()).toBe('handshaking')
+
+    // No e2ee_authenticated ever arrives — the handshake timer must terminate
+    // the socket instead of leaving the client wedged in 'handshaking'.
+    await vi.advanceTimersByTimeAsync(5_000)
+
+    expect(socket.close).toHaveBeenCalledTimes(1)
+    expect(client.getState()).toBe('reconnecting')
+    expect(client.getReconnectAttempt()).toBe(1)
+
+    client.close()
+  })
+
+  it('does not reset reconnect backoff when a reconnect handshake stalls', async () => {
+    const client = connect('ws://desktop.invalid', 'token', 'server-key')
+    mockSockets[0]!.close()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(client.getReconnectAttempt()).toBe(1)
+
+    // The retried socket opens and receives e2ee_ready but never authenticates.
+    // A stalled handshake never reaches 'connected', so the 30s stable-reset is
+    // never armed — backoff must keep climbing rather than snapping back to zero.
+    const second = mockSockets[1]!
+    second.open()
+    second.receive(JSON.stringify({ type: 'e2ee_ready' }))
+    expect(client.getReconnectAttempt()).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(client.getState()).toBe('reconnecting')
+    expect(client.getReconnectAttempt()).toBe(2)
+
+    client.close()
+  })
+
   it('treats an incompatible handshake protocol as terminal', () => {
     const client = connect('ws://desktop.invalid', 'token', 'server-key')
     const socket = mockSockets[0]!

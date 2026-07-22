@@ -83,7 +83,28 @@ describe('terminal foreground recovery', () => {
     expect(harness.subscribeToTerminal).toHaveBeenCalledWith('term-1')
   })
 
-  it('marks inactive mounted terminal buffers stale so their next activation can replay', () => {
+  it('only recovers the active mounted surface and leaves unmounted panes untouched', () => {
+    // Why: single-surface park unmounts inactive terminals, so an inactive
+    // handle is initialized-but-not-mounted (no ref). Recovery must not touch
+    // its stale mark here — it self-heals via the reload path when it remounts
+    // active and fires web-ready again.
+    const harness = createHarness()
+    harness.initializedHandlesRef.current.add('term-2')
+
+    const recovered = recoverActiveTerminalAfterForeground(harness)
+
+    expect(recovered).toBe('recovered')
+    expect(harness.initializedHandlesRef.current.has('term-1')).toBe(false)
+    expect(harness.initializedHandlesRef.current.has('term-2')).toBe(true)
+    expect(harness.terminalRefs.current.has('term-2')).toBe(false)
+    expect(harness.unsubscribeTerminal).toHaveBeenCalledWith('term-1')
+    expect(harness.unsubscribeTerminal).not.toHaveBeenCalledWith('term-2')
+  })
+
+  it('still clears stale marks for any straggler mounted handles', () => {
+    // Why: defensive — if more than one surface is ever mounted (transient
+    // remount overlap during a tab switch), every mounted+initialized handle
+    // gets its mark cleared so none replay stale scrollback.
     const harness = createHarness()
     harness.terminalRefs.current.set('term-2', {} as TerminalWebViewHandle)
     harness.initializedHandlesRef.current.add('term-2')
