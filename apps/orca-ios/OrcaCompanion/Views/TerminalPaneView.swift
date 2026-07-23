@@ -16,9 +16,14 @@ struct TerminalPaneView: View {
   /// Class token so displace callbacks can flip a flag without stale `@State`.
   @State private var lease: SurfaceMountLease?
   @State private var dictationId: String?
-  @State private var dictationBusy = false
   @State private var fittedCols = 0
   @State private var fittedRows = 0
+  /// Why: companion is voice-first — hide TextField so the keyboard never eats the terminal.
+  @State private var inputMode: TerminalInputMode = .voice
+  @FocusState private var typingFocused: Bool
+  @State private var onDeviceDictation = OnDeviceDictationSession()
+  /// Tap-to-talk phase — start on first tap, stop+send on second.
+  @State private var dictationPhase: VoiceDictationPhase = .idle
 
   var body: some View {
     ZStack {
@@ -39,47 +44,30 @@ struct TerminalPaneView: View {
           .padding(.top, 12)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+        // Why: fixed height so live transcript never reflows the mic bar.
         Text(status)
           .font(.caption2)
           .foregroundStyle(CompanionTheme.mutedForeground)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .frame(maxWidth: .infinity)
+          .frame(height: 18)
           .padding(.top, 8)
+          .padding(.horizontal, 16)
 
         if let dictationError = session.dictationError {
           Text(dictationError)
             .font(.caption2)
             .foregroundStyle(CompanionTheme.destructive)
+            .lineLimit(2)
             .padding(.horizontal, 16)
             .padding(.top, 4)
         }
 
-        HStack(spacing: 10) {
-          TextField(session.allowsTerminalInput ? "Send…" : "Notify — input blocked", text: $input)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .foregroundStyle(CompanionTheme.foreground)
-            .padding(12)
-            .companionCard(cornerRadius: 14)
-            .disabled(!session.allowsTerminalInput)
-          Button {
-            Task { await toggleDictation() }
-          } label: {
-            Image(systemName: dictationId == nil ? "mic" : "mic.fill")
-              .foregroundStyle(CompanionTheme.primaryForeground)
-              .frame(width: 44, height: 44)
-          }
-          .companionPrimaryButton()
-          .disabled(!session.allowsDictation || dictationBusy)
-          Button {
-            Task { await sendLine() }
-          } label: {
-            Image(systemName: "return")
-              .foregroundStyle(CompanionTheme.primaryForeground)
-              .frame(width: 44, height: 44)
-          }
-          .companionPrimaryButton()
-          .disabled(input.isEmpty || !session.allowsTerminalInput)
-        }
-        .padding(16)
+        inputBar
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
+          .frame(minHeight: 88)
       }
     }
     .navigationTitle(tab.title)
@@ -91,20 +79,128 @@ struct TerminalPaneView: View {
     }
     .onChange(of: session.attachRole.role) { _, role in
       status = statusLine(for: role)
-      if !role.allowsDictation, let id = dictationId {
-        Task {
-          await session.cancelDictation(dictationId: id)
-          dictationId = nil
+      if !role.allowsDictation {
+        if onDeviceDictation.isRunning {
+          onDeviceDictation.cancel()
         }
+        dictationPhase = .idle
+        status = statusLine(for: role)
       }
     }
     .onChange(of: colorScheme) { _, scheme in
       applyChrome(for: scheme)
     }
+    .onChange(of: onDeviceDictation.transcript) { _, text in
+      if onDeviceDictation.isRunning, !text.isEmpty {
+        status = text
+      }
+    }
+    .onChange(of: inputMode) { _, mode in
+      if mode == .voice {
+        typingFocused = false
+        input = ""
+      }
+    }
     .onDisappear {
       if let lease {
         tearDownIfOwning(lease)
       }
+    }
+  }
+
+  @ViewBuilder
+  private var inputBar: some View {
+    switch inputMode {
+    case .voice:
+      voiceBar
+    case .typing:
+      typingBar
+    }
+  }
+
+  /// One pattern: tap mic to talk, tap again to send — no keyboard.
+  private var voiceBar: some View {
+    HStack(spacing: 12) {
+      Button {
+        inputMode = .typing
+        typingFocused = true
+      } label: {
+        Image(systemName: "keyboard")
+          .font(.body.weight(.medium))
+          .foregroundStyle(CompanionTheme.mutedForeground)
+          .frame(width: 44, height: 44)
+      }
+      .accessibilityLabel("Show keyboard")
+      .disabled(!session.allowsTerminalInput)
+
+      Spacer(minLength: 0)
+
+      micToggleButton
+
+      Spacer(minLength: 0)
+
+      Color.clear.frame(width: 44, height: 44)
+    }
+  }
+
+  private var micToggleButton: some View {
+    let active = onDeviceDictation.isRunning
+      || dictationPhase == .listening
+      || dictationPhase == .starting
+      || dictationPhase == .finishing
+    return Button {
+      Task { await toggleDictation() }
+    } label: {
+      ZStack {
+        Capsule()
+          .fill(CompanionTheme.primary)
+        Image(systemName: active ? "mic.fill" : "mic")
+          .font(.title2.weight(.semibold))
+          .foregroundStyle(CompanionTheme.primaryForeground)
+          .scaleEffect(active ? 1.12 : 1.0)
+          .animation(.easeOut(duration: 0.12), value: active)
+      }
+      .frame(width: 80, height: 80)
+    }
+    .buttonStyle(.plain)
+    .opacity(session.allowsDictation ? 1 : 0.4)
+    .disabled(!session.allowsDictation || dictationPhase == .finishing)
+    .accessibilityLabel(active ? "Stop dictation and send" : "Start dictation")
+  }
+
+  private var typingBar: some View {
+    HStack(spacing: 10) {
+      Button {
+        inputMode = .voice
+      } label: {
+        Image(systemName: "mic")
+          .foregroundStyle(CompanionTheme.mutedForeground)
+          .frame(width: 44, height: 44)
+      }
+      .accessibilityLabel("Voice mode")
+
+      TextField(session.allowsTerminalInput ? "Send…" : "Notify — input blocked", text: $input)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+        .focused($typingFocused)
+        .foregroundStyle(CompanionTheme.foreground)
+        .padding(12)
+        .companionCard(cornerRadius: 14)
+        .disabled(!session.allowsTerminalInput)
+        .submitLabel(.send)
+        .onSubmit {
+          Task { await sendLine() }
+        }
+
+      Button {
+        Task { await sendLine() }
+      } label: {
+        Image(systemName: "return")
+          .foregroundStyle(CompanionTheme.primaryForeground)
+          .frame(width: 44, height: 44)
+      }
+      .companionPrimaryButton()
+      .disabled(input.isEmpty || !session.allowsTerminalInput)
     }
   }
 
@@ -171,6 +267,10 @@ struct TerminalPaneView: View {
       Task { try? await session.cancelDictation(dictationId: id) }
       dictationId = nil
     }
+    if onDeviceDictation.isRunning {
+      onDeviceDictation.cancel()
+    }
+    dictationPhase = .idle
 
     let stillOwner = session.surfaceMount.activeMountId == lease.id && !lease.displaced
     // Why: if another pane claimed the gate, AttachRoleController already
@@ -185,13 +285,23 @@ struct TerminalPaneView: View {
   }
 
   private func statusLine(for role: WorkspaceAttachRole) -> String {
+    if !role.allowsGlyphStream {
+      return "Notify (no glyph stream)"
+    }
     let grid =
       fittedCols > 0 && fittedRows > 0
       ? " \(fittedCols)×\(fittedRows)"
       : ""
-    return role.allowsGlyphStream
-      ? "Live (Metal)\(grid)"
-      : "Notify (no glyph stream)"
+    if onDeviceDictation.isRunning || dictationPhase == .listening || dictationPhase == .starting {
+      return "Listening… tap mic to send"
+    }
+    if dictationPhase == .finishing {
+      return "Sending…"
+    }
+    if inputMode == .voice, role.allowsDictation {
+      return "Voice · tap mic\(grid)"
+    }
+    return "Live (Metal)\(grid)"
   }
 
   private func applyEvent(_ event: [String: Any], engine: GhosttyVtEngine) {
@@ -245,6 +355,9 @@ struct TerminalPaneView: View {
   }
 
   private func applyViewportFit(_ fit: TerminalViewportFit.Grid) {
+    let grew =
+      fittedCols > 0
+      && (fit.cols > fittedCols || fit.rows > fittedRows)
     fittedCols = fit.cols
     fittedRows = fit.rows
     guard let engine else { return }
@@ -254,8 +367,12 @@ struct TerminalPaneView: View {
     }
     do {
       try engine.resize(cols: fit.cols, rows: fit.rows)
+      // Why: in-place host refit — do not resubscribe (that broke grow + session).
       session.attachRole.updateViewport(cols: fit.cols, rows: fit.rows)
       refresh(engine)
+      if grew {
+        status = statusLine(for: session.attachRole.role)
+      }
     } catch {
       status = "Resize: \(error.localizedDescription)"
     }
@@ -297,41 +414,87 @@ struct TerminalPaneView: View {
   }
 
   private func toggleDictation() async {
+    switch dictationPhase {
+    case .idle:
+      await beginToggleDictation()
+    case .starting, .listening:
+      await endToggleDictation()
+    case .finishing:
+      break
+    }
+  }
+
+  private func beginToggleDictation() async {
     guard session.allowsDictation else {
       status = "Dictation blocked (notify)"
       return
     }
-    dictationBusy = true
-    defer { dictationBusy = false }
-
-    if let active = dictationId {
-      do {
-        let text = try await session.finishDictation(dictationId: active)
-        dictationId = nil
-        if !text.isEmpty {
-          try await session.sendTerminalText(handle: tab.terminal, text: text, enter: true)
-        }
-        status = "Dictation sent"
-      } catch {
-        dictationId = nil
-        status = error.localizedDescription
-      }
-      return
-    }
-
+    guard dictationPhase == .idle else { return }
+    dictationPhase = .starting
+    status = "Listening… tap mic to send"
+    UIImpactFeedbackGenerator(style: .light).impactOccurred()
     do {
-      let setup = try await session.fetchDictationSetup()
-      guard setup.isReady else {
-        status = setup.enabled
-          ? "Speech model not ready on desktop"
-          : SpeechDictationError.voiceDictationDisabled.localizedDescription
+      try await onDeviceDictation.start()
+      if dictationPhase == .starting {
+        dictationPhase = .listening
+        status = "Listening… tap mic to send"
+      } else if dictationPhase == .finishing {
+        // Second tap arrived while start was still opening the mic.
+        await finishToggleDictation()
+      } else if dictationPhase == .idle {
+        onDeviceDictation.cancel()
+      }
+    } catch {
+      onDeviceDictation.cancel()
+      dictationPhase = .idle
+      status = error.localizedDescription
+    }
+  }
+
+  private func endToggleDictation() async {
+    switch dictationPhase {
+    case .starting:
+      dictationPhase = .finishing
+      status = "Sending…"
+    case .listening:
+      dictationPhase = .finishing
+      await finishToggleDictation()
+    case .idle, .finishing:
+      break
+    }
+  }
+
+  private func finishToggleDictation() async {
+    status = "Sending…"
+    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    do {
+      let text: String
+      if onDeviceDictation.isRunning {
+        text = try await onDeviceDictation.stop()
+      } else {
+        text = onDeviceDictation.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+          throw OnDeviceDictationSession.SessionError.noSpeech
+        }
+      }
+      guard session.allowsTerminalInput else {
+        dictationPhase = .idle
+        status = "Input blocked (notify)"
         return
       }
-      let id = UUID().uuidString
-      try await session.startDictation(dictationId: id)
-      dictationId = id
-      status = "Listening…"
+      try await session.sendTerminalText(handle: tab.terminal, text: text, enter: true)
+      status = "Sent"
+      dictationPhase = .idle
+      try? await Task.sleep(nanoseconds: 600_000_000)
+      if dictationPhase == .idle {
+        status = statusLine(for: session.attachRole.role)
+      }
+    } catch is CancellationError {
+      dictationPhase = .idle
+      status = statusLine(for: session.attachRole.role)
     } catch {
+      onDeviceDictation.cancel()
+      dictationPhase = .idle
       status = error.localizedDescription
     }
   }
@@ -341,6 +504,20 @@ struct TerminalPaneView: View {
       try? await Task.sleep(nanoseconds: 1_000_000_000)
     }
   }
+}
+
+enum TerminalInputMode: Equatable {
+  /// Default: mic only — keyboard never presented.
+  case voice
+  /// Escape hatch for rare typed input.
+  case typing
+}
+
+enum VoiceDictationPhase: Equatable {
+  case idle
+  case starting
+  case listening
+  case finishing
 }
 
 /// Mutable lease token for displace callbacks (escaping closures cannot reliably

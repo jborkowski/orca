@@ -183,10 +183,14 @@ final class TerminalMetalHostView: UIView {
       onViewportFit?(fit)
     }
 
-    guard let frame = pendingFrame,
-          frame.cols == fit.cols,
-          frame.rows == fit.rows
-    else {
+    // Why: while local VT is catching up to a new fit, still paint what we have
+    // so the surface doesn't flash empty during grow/refit.
+    guard let frame = pendingFrame else {
+      mtkView.setNeedsDisplay()
+      return
+    }
+    if frame.cols != fit.cols || frame.rows != fit.rows {
+      renderer.update(frame: frame, layout: fit)
       mtkView.setNeedsDisplay()
       return
     }

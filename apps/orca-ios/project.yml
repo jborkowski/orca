@@ -36,6 +36,8 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
         INFOPLIST_KEY_NSCameraUsageDescription: Scan the Orca desktop pairing QR code.
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to your Orca desktop on the local network.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Record voice prompts to send into your Orca terminal.
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: Turn your speech into text prompts for the paired Orca desktop.
         GENERATE_INFOPLIST_FILE: true
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: 0.1.0
@@ -51,6 +53,8 @@ targets:
           NSAllowsLocalNetworking: true
           NSAllowsArbitraryLoads: true
         NSLocalNetworkUsageDescription: Connect to your Orca desktop on the local network.
+        NSMicrophoneUsageDescription: Record voice prompts to send into your Orca terminal.
+        NSSpeechRecognitionUsageDescription: Turn your speech into text prompts for the paired Orca desktop.
         NSBonjourServices:
           - _http._tcp
           - _orca._tcp

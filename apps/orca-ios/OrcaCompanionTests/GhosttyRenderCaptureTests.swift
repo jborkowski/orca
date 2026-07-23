@@ -115,6 +115,7 @@ final class TerminalChromeAppearanceTests: XCTestCase {
   }
 }
 
+final class TerminalViewportFitTests: XCTestCase {
   func testFitUsesExactAtlasCellsWithoutStretch() throws {
     let grid = try XCTUnwrap(
       TerminalViewportFit.fit(

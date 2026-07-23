@@ -32,6 +32,10 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Connect to your Orca desktop on the local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice prompts to send into your Orca terminal.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn your speech into text prompts for the paired Orca desktop.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

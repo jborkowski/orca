@@ -17,6 +17,7 @@
 		38B57A8F0171205E27330F6D /* TerminalChromeAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6449B2AF9BEF1DAFB6608F67 /* TerminalChromeAppearance.swift */; };
 		3A461D81C53710C25D162C95 /* WorkspaceAttachRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = B031B47783225ABD4FD3AC9B /* WorkspaceAttachRole.swift */; };
 		3ADC82AD46E53951A5E12AE8 /* MetalTerminalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6DC8D2BC4457A655F87884 /* MetalTerminalRenderer.swift */; };
+		3C08E197CE51D5B968AB1A6F /* OnDeviceDictationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3071454919A84AED5E5EF13 /* OnDeviceDictationSession.swift */; };
 		3C4C571A03C3C15062C9A503 /* GhosttyRenderCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F30AE890FF87456F34E229 /* GhosttyRenderCaptureTests.swift */; };
 		3D3D1E9AF868089A38620A3C /* E2EECrypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D17E50ECC5A61D7D68AF1 /* E2EECrypto.swift */; };
 		4B30509A316439AB14A9E6E1 /* HostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */; };
@@ -129,6 +130,7 @@
 		DF1775BDF5456DBB9364BA3D /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		E00FB54EAE1FC1960AD24157 /* HostDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDetailView.swift; sourceTree = "<group>"; };
 		E24CFD862D55F821E9196BCD /* HostProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostProfile.swift; sourceTree = "<group>"; };
+		E3071454919A84AED5E5EF13 /* OnDeviceDictationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceDictationSession.swift; sourceTree = "<group>"; };
 		E940CC7B51A193DE098F5241 /* SessionTerminalTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTerminalTab.swift; sourceTree = "<group>"; };
 		EE7C1870AD7413EBFE399CED /* OrcaCompanionTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OrcaCompanionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0BB228C526D3E9EC7303770 /* SpeechDictationSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDictationSession.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 			children = (
 				651D0F900C17BDEBFA8922BE /* AttachRoleController.swift */,
 				4AF2B771FCDB4D7F98B3FA19 /* CompanionSession.swift */,
+				E3071454919A84AED5E5EF13 /* OnDeviceDictationSession.swift */,
 				F0BB228C526D3E9EC7303770 /* SpeechDictationSession.swift */,
 				872F6FA5EE7C28823693AA52 /* TerminalSurfaceMountGate.swift */,
 			);
@@ -402,6 +405,7 @@
 				8398E69597A74D0D941151CA /* KeychainStore.swift in Sources */,
 				3ADC82AD46E53951A5E12AE8 /* MetalTerminalRenderer.swift in Sources */,
 				779F56FC0154C7EB5E5C109B /* MetalTerminalView.swift in Sources */,
+				3C08E197CE51D5B968AB1A6F /* OnDeviceDictationSession.swift in Sources */,
 				F77CE094DB786923F964BE44 /* OrcaCompanionApp.swift in Sources */,
 				899572D3D1473CD3D04D839C /* OrcaRpcClient.swift in Sources */,
 				BF8194C89212504D3A74B2E0 /* PairHostSheet.swift in Sources */,
@@ -474,6 +478,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Orca Companion (Dev)";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the Orca desktop pairing QR code.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Connect to your Orca desktop on the local network.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Record voice prompts to send into your Orca terminal.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Turn your speech into text prompts for the paired Orca desktop.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -664,6 +670,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Orca Companion (Dev)";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Scan the Orca desktop pairing QR code.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Connect to your Orca desktop on the local network.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Record voice prompts to send into your Orca terminal.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Turn your speech into text prompts for the paired Orca desktop.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -122,6 +122,32 @@ final class AttachRoleControllerTests: XCTestCase {
     }
   }
 
+  func testUpdateViewportSendsInPlaceRpcWithoutResubscribe() async throws {
+    let controller = AttachRoleController()
+    controller.bind(client: client, terminal: "term-1", cols: 40, rows: 20) { _ in }
+    _ = try await waitForDecryptedMethod("terminal.subscribe")
+    let afterBind = channel.sent.count
+
+    controller.updateViewport(cols: 42, rows: 68)
+    try await waitUntil {
+      self.decryptedMethods().contains("terminal.updateViewport")
+    }
+
+    let frames = try decryptedFrames(from: afterBind)
+    let methods = frames.map { $0["method"] as? String }
+    XCTAssertEqual(methods, ["terminal.updateViewport"])
+    XCTAssertFalse(methods.contains("terminal.unsubscribe"))
+    XCTAssertFalse(methods.contains("terminal.subscribe"))
+
+    let params = frames[0]["params"] as! [String: Any]
+    XCTAssertEqual(params["terminal"] as? String, "term-1")
+    let viewport = params["viewport"] as! [String: Any]
+    XCTAssertEqual(viewport["cols"] as? Int, 42)
+    XCTAssertEqual(viewport["rows"] as? Int, 68)
+    let clientParam = params["client"] as! [String: Any]
+    XCTAssertEqual(clientParam["type"] as? String, "mobile")
+  }
+
   func testUnbindClearsSubscription() async throws {
     let controller = AttachRoleController()
     controller.bind(client: client, terminal: "term-1") { _ in }

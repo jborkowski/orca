@@ -79,14 +79,30 @@ final class AttachRoleController {
     resubscribe()
   }
 
-  /// Refit subscribe viewport when the Metal surface measures a new cols×rows.
+  /// Refit the live PTY to the phone viewport without tearing the subscribe.
+  ///
+  /// Why: Expo uses `terminal.updateViewport` in place. A full unsubscribe →
+  /// subscribe on every Metal layout pass blips the mobile driver and can leave
+  /// the host PTY stuck at the first (too-small) fit — “doesn’t grow” / session break.
   func updateViewport(cols: Int, rows: Int) {
     guard var target, target.cols != cols || target.rows != rows else { return }
     target.cols = cols
     target.rows = rows
     self.target = target
-    guard rpcClient != nil, onEvent != nil else { return }
-    resubscribe()
+    guard role == .interactive, let client = rpcClient else { return }
+    let handle = target.handle
+    let token = client.deviceTokenValue
+    Task {
+      _ = try? await client.sendRequest(
+        method: "terminal.updateViewport",
+        params: [
+          "terminal": handle,
+          "client": ["id": token, "type": "mobile"],
+          "viewport": ["cols": cols, "rows": rows]
+        ],
+        timeoutMs: 8_000
+      )
+    }
   }
 
   // MARK: - Private
