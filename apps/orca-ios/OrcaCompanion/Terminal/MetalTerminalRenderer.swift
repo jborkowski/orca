@@ -20,12 +20,11 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
   private var vertexBuffer: MTLBuffer?
   private var vertexCapacity = 0
   private var vertexCount = 0
-  private var lastDrawableSize: CGSize = .zero
+  private var lastLayout: TerminalViewportFit.Grid?
   private var atlasGeneration = 0
   private var lastCursorCol: Int?
   private var lastCursorRow: Int?
   private(set) var frame: TerminalFrame?
-  private(set) var lastLayout: TerminalViewportFit.Grid?
 
   var cellPixelWidth: Int { atlas.cellPixelWidth }
   var cellPixelHeight: Int { atlas.cellPixelHeight }
@@ -34,8 +33,8 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     guard let device = mtkView.device ?? MTLCreateSystemDefaultDevice(),
           let queue = device.makeCommandQueue()
     else { return nil }
-    // Why: atlas is authored in pixels; match Retina drawable so 13pt stays 13pt.
-    let pointSize = 13 * UIScreen.main.scale
+    // Why: atlas pixels ≈ on-screen cell pixels at Menlo 13 on this screen scale.
+    let pointSize = 13 * (UIScreen.main.scale)
     guard let atlas = GlyphAtlas(device: device, pointSize: pointSize) else { return nil }
     self.device = device
     self.queue = queue
@@ -43,7 +42,8 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     atlasGeneration = atlas.generation
     mtkView.device = device
     mtkView.colorPixelFormat = .bgra8Unorm
-    mtkView.clearColor = MTLClearColor(red: 0.05, green: 0.05, blue: 0.06, alpha: 1)
+    // Cleared again by TerminalMetalHostView when traits change (system light/dark).
+    mtkView.clearColor = MTLClearColor(red: 1, green: 1, blue: 1, alpha: 1)
     mtkView.isPaused = true
     mtkView.enableSetNeedsDisplay = true
 
@@ -84,16 +84,8 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     mtkView.delegate = self
   }
 
-  func layoutGrid(for drawableSize: CGSize) -> TerminalViewportFit.Grid {
-    TerminalViewportFit.fit(
-      drawableSize: drawableSize,
-      cellPixelWidth: atlas.cellPixelWidth,
-      cellPixelHeight: atlas.cellPixelHeight
-    )
-  }
-
-  func update(frame: TerminalFrame, drawableSize: CGSize) {
-    let sizeChanged = drawableSize != lastDrawableSize
+  func update(frame: TerminalFrame, layout: TerminalViewportFit.Grid) {
+    let layoutChanged = lastLayout != layout
     if atlas.generation != atlasGeneration {
       atlasGeneration = atlas.generation
     }
@@ -108,7 +100,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     }
 
     let forceFull =
-      sizeChanged
+      layoutChanged
       || vertexCount == 0
       || frame.dirty == .full
       || atlas.generation != atlasGeneration
@@ -116,32 +108,38 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
       || lastLayout?.rows != frame.rows
 
     self.frame = frame
-    lastDrawableSize = drawableSize
+    lastLayout = layout
     lastCursorCol = frame.cursorCol
     lastCursorRow = frame.cursorRow
-    lastLayout = TerminalViewportFit.Grid(
-      cols: frame.cols,
-      rows: frame.rows,
-      cellWidth: Float(atlas.cellPixelWidth),
-      cellHeight: Float(atlas.cellPixelHeight),
-      originX: max(0, (Float(drawableSize.width) - Float(frame.cols) * Float(atlas.cellPixelWidth)) * 0.5),
-      originY: max(0, (Float(drawableSize.height) - Float(frame.rows) * Float(atlas.cellPixelHeight)) * 0.5)
-    )
 
     if forceFull {
-      rebuildVertices(drawableSize: drawableSize)
+      rebuildVertices(layout: layout)
     } else if !rowsToPatch.isEmpty {
-      patchRows(rowsToPatch, frame: frame, drawableSize: drawableSize)
+      patchRows(rowsToPatch, frame: frame, layout: layout)
     } else if frame.dirty == .none {
       return
     } else {
-      rebuildVertices(drawableSize: drawableSize)
+      rebuildVertices(layout: layout)
     }
 
-    // Atlas overflow during UV fill invalidates packed UVs — full rebuild once.
     if atlas.generation != atlasGeneration {
       atlasGeneration = atlas.generation
-      rebuildVertices(drawableSize: drawableSize)
+      rebuildVertices(layout: layout)
+    }
+  }
+
+  private func boostContrastIfNeeded(fg: inout SIMD4<Float>, bg: inout SIMD4<Float>) {
+    func lum(_ c: SIMD4<Float>) -> Float {
+      0.2126 * c.x + 0.7152 * c.y + 0.0722 * c.z
+    }
+    let fgL = lum(fg)
+    let bgL = lum(bg)
+    // Why: Cursor Agent paints light chips; if fg lands near bg, glyphs vanish.
+    if abs(fgL - bgL) >= 0.28 { return }
+    if bgL >= 0.55 {
+      fg = SIMD4(0.08, 0.08, 0.09, 1)
+    } else {
+      fg = SIMD4(0.92, 0.92, 0.94, 1)
     }
   }
 
@@ -163,12 +161,11 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     row: Int,
     cell: TerminalCell,
     frame: TerminalFrame,
-    layout: TerminalViewportFit.Grid,
-    drawableSize: CGSize
+    layout: TerminalViewportFit.Grid
   ) {
     func ndc(_ px: Float, _ py: Float) -> SIMD2<Float> {
-      let x = (px / Float(drawableSize.width)) * 2 - 1
-      let y = 1 - (py / Float(drawableSize.height)) * 2
+      let x = (px / layout.drawableWidth) * 2 - 1
+      let y = 1 - (py / layout.drawableHeight) * 2
       return SIMD2(x, y)
     }
 
@@ -194,6 +191,7 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     if frame.cursorVisible, frame.cursorCol == col, frame.cursorRow == row {
       swap(&fg, &bg)
     }
+    boostContrastIfNeeded(fg: &fg, bg: &bg)
 
     let u0: Float
     let v0: Float
@@ -217,29 +215,19 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
     ptr[base + 5] = TerminalCellVertex(position: p2, uv: SIMD2(u0, v1), fg: fg, bg: bg)
   }
 
-  private func currentLayout(drawableSize: CGSize, frame: TerminalFrame) -> TerminalViewportFit.Grid {
-    if let lastLayout, lastLayout.cols == frame.cols, lastLayout.rows == frame.rows {
-      return lastLayout
-    }
-    return TerminalViewportFit.Grid(
-      cols: frame.cols,
-      rows: frame.rows,
-      cellWidth: Float(atlas.cellPixelWidth),
-      cellHeight: Float(atlas.cellPixelHeight),
-      originX: max(0, (Float(drawableSize.width) - Float(frame.cols) * Float(atlas.cellPixelWidth)) * 0.5),
-      originY: max(0, (Float(drawableSize.height) - Float(frame.rows) * Float(atlas.cellPixelHeight)) * 0.5)
-    )
-  }
-
-  private func rebuildVertices(drawableSize: CGSize) {
-    guard let frame, drawableSize.width > 1, drawableSize.height > 1 else {
+  private func rebuildVertices(layout: TerminalViewportFit.Grid) {
+    guard let frame,
+          layout.drawableWidth > 1,
+          layout.drawableHeight > 1,
+          frame.cols == layout.cols,
+          frame.rows == layout.rows
+    else {
       vertexCount = 0
       return
     }
     ensureVertexBuffer(cellCount: frame.cols * frame.rows)
     guard let buffer = vertexBuffer else { return }
     let ptr = buffer.contents().bindMemory(to: TerminalCellVertex.self, capacity: vertexCapacity)
-    let layout = currentLayout(drawableSize: drawableSize, frame: frame)
 
     for row in 0 ..< frame.rows {
       for col in 0 ..< frame.cols {
@@ -251,18 +239,20 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
           row: row,
           cell: cell,
           frame: frame,
-          layout: layout,
-          drawableSize: drawableSize
+          layout: layout
         )
       }
     }
   }
 
-  private func patchRows(_ rows: IndexSet, frame: TerminalFrame, drawableSize: CGSize) {
+  private func patchRows(_ rows: IndexSet, frame: TerminalFrame, layout: TerminalViewportFit.Grid) {
+    guard frame.cols == layout.cols, frame.rows == layout.rows else {
+      rebuildVertices(layout: layout)
+      return
+    }
     ensureVertexBuffer(cellCount: frame.cols * frame.rows)
     guard let buffer = vertexBuffer else { return }
     let ptr = buffer.contents().bindMemory(to: TerminalCellVertex.self, capacity: vertexCapacity)
-    let layout = currentLayout(drawableSize: drawableSize, frame: frame)
 
     for row in rows {
       guard row >= 0, row < frame.rows else { continue }
@@ -275,18 +265,14 @@ final class MetalTerminalRenderer: NSObject, MTKViewDelegate {
           row: row,
           cell: cell,
           frame: frame,
-          layout: layout,
-          drawableSize: drawableSize
+          layout: layout
         )
       }
     }
   }
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-    if let frame {
-      lastDrawableSize = .zero
-      update(frame: frame, drawableSize: size)
-    }
+    // Size is owned by MetalTerminalView (forced to GeometryReader × scale).
   }
 
   func draw(in view: MTKView) {

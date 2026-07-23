@@ -6,6 +6,7 @@ import SwiftUI
 /// so workspace / host / tab switches tear down the previous stream before the next.
 struct TerminalPaneView: View {
   @Environment(CompanionSession.self) private var session
+  @Environment(\.colorScheme) private var colorScheme
   let tab: SessionTerminalTab
 
   @State private var terminalFrame: TerminalFrame?
@@ -16,14 +17,22 @@ struct TerminalPaneView: View {
   @State private var lease: SurfaceMountLease?
   @State private var dictationId: String?
   @State private var dictationBusy = false
+  @State private var fittedCols = 0
+  @State private var fittedRows = 0
 
   var body: some View {
     ZStack {
       CompanionBackdrop()
       VStack(spacing: 0) {
-        MetalTerminalView(frame: terminalFrame) { fit in
-          applyViewportFit(fit)
-        }
+        MetalTerminalView(
+          frame: terminalFrame,
+          onViewportFit: { fit in
+            applyViewportFit(fit)
+          },
+          onScrollRows: { delta in
+            applyScroll(delta)
+          }
+        )
           .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
           .companionCard(cornerRadius: 16)
           .padding(.horizontal, 16)
@@ -89,11 +98,26 @@ struct TerminalPaneView: View {
         }
       }
     }
+    .onChange(of: colorScheme) { _, scheme in
+      applyChrome(for: scheme)
+    }
     .onDisappear {
       if let lease {
         tearDownIfOwning(lease)
       }
     }
+  }
+
+  private var chromeAppearance: TerminalChromeAppearance {
+    colorScheme == .dark ? .dark : .light
+  }
+
+  private func applyChrome(for scheme: ColorScheme) {
+    guard let engine else { return }
+    let next: TerminalChromeAppearance = scheme == .dark ? .dark : .light
+    guard engine.chromeAppearance != next else { return }
+    engine.applyChromeAppearance(next)
+    refresh(engine)
   }
 
   private func runLiveSurface() async {
@@ -107,7 +131,11 @@ struct TerminalPaneView: View {
     }
 
     do {
-      let vt = try GhosttyVtEngine(cols: 80, rows: 24)
+      // Why: start near phone density; GeometryReader fit resizes before first draw.
+      let cols = fittedCols > 0 ? fittedCols : 40
+      let rows = fittedRows > 0 ? fittedRows : 20
+      let vt = try GhosttyVtEngine(cols: cols, rows: rows)
+      vt.applyChromeAppearance(chromeAppearance)
       engine = vt
       terminalFrame = try vt.captureFrame()
       guard let client = session.rpcClient else {
@@ -117,7 +145,12 @@ struct TerminalPaneView: View {
         return
       }
       // I1 owns role + subscribe/unsubscribe; bind replaces any prior stream.
-      session.attachRole.bind(client: client, terminal: tab.terminal) { event in
+      session.attachRole.bind(
+        client: client,
+        terminal: tab.terminal,
+        cols: cols,
+        rows: rows
+      ) { event in
         Task { @MainActor in
           applyEvent(event, engine: vt)
         }
@@ -152,7 +185,13 @@ struct TerminalPaneView: View {
   }
 
   private func statusLine(for role: WorkspaceAttachRole) -> String {
-    role.allowsGlyphStream ? "Live (Metal)" : "Notify (no glyph stream)"
+    let grid =
+      fittedCols > 0 && fittedRows > 0
+      ? " \(fittedCols)×\(fittedRows)"
+      : ""
+    return role.allowsGlyphStream
+      ? "Live (Metal)\(grid)"
+      : "Notify (no glyph stream)"
   }
 
   private func applyEvent(_ event: [String: Any], engine: GhosttyVtEngine) {
@@ -165,8 +204,20 @@ struct TerminalPaneView: View {
     }
     if type == "scrollback" || type == "resized", let serialized = event["serialized"] as? String {
       // Snapshot restore from subscribe — not a cold PTY spawn.
+      // Why: keep the VT at the phone-fitted grid so Metal never draws a
+      // desktop 80×24 (or wider) stretched into the portrait drawable.
+      if fittedCols > 0, fittedRows > 0,
+         engine.cols != fittedCols || engine.rows != fittedRows
+      {
+        try? engine.resize(cols: fittedCols, rows: fittedRows)
+      }
       engine.reset()
       engine.write(Data(serialized.utf8))
+      if fittedCols > 0, fittedRows > 0,
+         engine.cols != fittedCols || engine.rows != fittedRows
+      {
+        try? engine.resize(cols: fittedCols, rows: fittedRows)
+      }
       refresh(engine)
       return
     }
@@ -177,7 +228,16 @@ struct TerminalPaneView: View {
 
   private func refresh(_ engine: GhosttyVtEngine) {
     do {
-      terminalFrame = try engine.captureFrame()
+      var frame = try engine.captureFrame()
+      // Why: if Ghostty reports a different grid after snapshot, force the
+      // phone fit again before handing pixels to Metal.
+      if fittedCols > 0, fittedRows > 0,
+         frame.cols != fittedCols || frame.rows != fittedRows
+      {
+        try engine.resize(cols: fittedCols, rows: fittedRows)
+        frame = try engine.captureFrame()
+      }
+      terminalFrame = frame
       status = statusLine(for: session.attachRole.role)
     } catch {
       status = "Render: \(error.localizedDescription)"
@@ -185,8 +245,13 @@ struct TerminalPaneView: View {
   }
 
   private func applyViewportFit(_ fit: TerminalViewportFit.Grid) {
+    fittedCols = fit.cols
+    fittedRows = fit.rows
     guard let engine else { return }
-    guard fit.cols != engine.cols || fit.rows != engine.rows else { return }
+    guard fit.cols != engine.cols || fit.rows != engine.rows else {
+      status = statusLine(for: session.attachRole.role)
+      return
+    }
     do {
       try engine.resize(cols: fit.cols, rows: fit.rows)
       session.attachRole.updateViewport(cols: fit.cols, rows: fit.rows)
@@ -194,6 +259,27 @@ struct TerminalPaneView: View {
     } catch {
       status = "Resize: \(error.localizedDescription)"
     }
+  }
+
+  private func applyScroll(_ deltaRows: Int) {
+    guard let engine, deltaRows != 0 else { return }
+
+    // Why: alternate-screen TUIs (Cursor Agent) have no local scrollback — Expo
+    // turns the same gesture into arrow-key PTY input.
+    if engine.needsRemoteScrollInput {
+      guard session.allowsTerminalInput else { return }
+      let count = min(abs(deltaRows), 6)
+      // Negative delta = older / content up → CSI A; positive → CSI B.
+      let key = deltaRows < 0 ? "\u{1b}[A" : "\u{1b}[B"
+      let payload = String(repeating: key, count: count)
+      Task {
+        try? await session.sendTerminalText(handle: tab.terminal, text: payload, enter: false)
+      }
+      return
+    }
+
+    engine.scrollByRows(deltaRows)
+    refresh(engine)
   }
 
   private func sendLine() async {

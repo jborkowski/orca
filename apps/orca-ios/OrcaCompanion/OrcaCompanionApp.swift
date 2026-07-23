@@ -10,7 +10,6 @@ struct OrcaCompanionApp: App {
     WindowGroup {
       RootView()
         .environment(session)
-        .preferredColorScheme(.dark)
         .tint(CompanionTheme.foreground)
     }
     .onChange(of: scenePhase) { _, phase in

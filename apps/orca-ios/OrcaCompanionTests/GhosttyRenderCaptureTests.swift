@@ -89,32 +89,55 @@ final class TerminalDirtyKindTests: XCTestCase {
   }
 }
 
-final class TerminalViewportFitTests: XCTestCase {
-  func testFitKeepsNaturalCellAspectAndFillsPhoneDrawable() {
-    // ~iPhone drawable at 3x for the terminal pane.
-    let grid = TerminalViewportFit.fit(
-      drawableSize: CGSize(width: 1100, height: 1800),
-      cellPixelWidth: 24,
-      cellPixelHeight: 51
+final class TerminalChromeAppearanceTests: XCTestCase {
+  func testLightRemapTurnsNearBlackBackgroundIntoPaper() {
+    let frame = TerminalFrame(
+      cols: 1,
+      rows: 1,
+      cells: [
+        TerminalCell(
+          text: "A",
+          foreground: TerminalRGB(r: 240, g: 240, b: 240),
+          background: TerminalRGB(r: 10, g: 10, b: 10),
+          width: 1
+        )
+      ],
+      defaultForeground: .white,
+      defaultBackground: .black,
+      cursorCol: nil,
+      cursorRow: nil,
+      cursorVisible: false,
+      dirty: .full
+    )
+    let mapped = frame.remapped(for: .light)
+    XCTAssertEqual(mapped.cells[0].background, TerminalChromeAppearance.light.background)
+    XCTAssertEqual(mapped.cells[0].foreground, TerminalChromeAppearance.light.foreground)
+  }
+}
+
+  func testFitUsesExactAtlasCellsWithoutStretch() throws {
+    let grid = try XCTUnwrap(
+      TerminalViewportFit.fit(
+        drawablePixels: CGSize(width: 1080, height: 1560),
+        cellPixelWidth: 24,
+        cellPixelHeight: 51
+      )
     )
     XCTAssertEqual(grid.cellWidth, 24)
     XCTAssertEqual(grid.cellHeight, 51)
-    XCTAssertEqual(grid.cols, Int(floor(1100.0 / 24.0)))
-    XCTAssertEqual(grid.rows, Int(floor(1800.0 / 51.0)))
-    XCTAssertGreaterThanOrEqual(grid.cols, 20)
-    XCTAssertGreaterThanOrEqual(grid.rows, 8)
+    XCTAssertEqual(grid.cols, 1080 / 24)
+    XCTAssertEqual(grid.rows, 1560 / 51)
+    XCTAssertEqual(Double(grid.cellWidth * Float(grid.cols) + grid.originX * 2), 1080, accuracy: 1)
   }
 
-  func testFitDoesNotStretchCellsToFill() {
-    let grid = TerminalViewportFit.fit(
-      drawableSize: CGSize(width: 800, height: 600),
-      cellPixelWidth: 10,
-      cellPixelHeight: 20
+  func testFitRejectsTinyDrawables() {
+    XCTAssertNil(
+      TerminalViewportFit.fit(
+        drawablePixels: CGSize(width: 10, height: 10),
+        cellPixelWidth: 24,
+        cellPixelHeight: 51
+      )
     )
-    XCTAssertEqual(grid.cols, 80)
-    XCTAssertEqual(grid.rows, 30)
-    XCTAssertEqual(grid.originX, 0)
-    XCTAssertEqual(grid.originY, 0)
   }
 }
 

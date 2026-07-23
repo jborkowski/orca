@@ -1,8 +1,8 @@
-import Foundation
 import CoreGraphics
+import Foundation
+import UIKit
 
-/// Compute a terminal grid that keeps glyph cells at their natural pixel aspect.
-/// Why: stretching a fixed 80×24 grid into a phone MTKView warps every glyph.
+/// Fit cols×rows so each on-screen cell is exactly one atlas glyph cell (no stretch).
 enum TerminalViewportFit {
   struct Grid: Equatable, Sendable {
     var cols: Int
@@ -11,34 +11,42 @@ enum TerminalViewportFit {
     var cellHeight: Float
     var originX: Float
     var originY: Float
+    var drawableWidth: Float
+    var drawableHeight: Float
   }
 
   static func fit(
-    drawableSize: CGSize,
+    drawablePixels: CGSize,
     cellPixelWidth: Int,
     cellPixelHeight: Int,
     minCols: Int = 20,
     minRows: Int = 8,
-    maxCols: Int = 300,
-    maxRows: Int = 200
-  ) -> Grid {
-    let cellW = Float(max(cellPixelWidth, 1))
-    let cellH = Float(max(cellPixelHeight, 1))
-    let drawableW = max(Float(drawableSize.width), cellW)
-    let drawableH = max(Float(drawableSize.height), cellH)
+    maxCols: Int = 200,
+    maxRows: Int = 120
+  ) -> Grid? {
+    let cellW = max(cellPixelWidth, 1)
+    let cellH = max(cellPixelHeight, 1)
+    let dw = Int(drawablePixels.width.rounded(.down))
+    let dh = Int(drawablePixels.height.rounded(.down))
+    guard dw >= cellW * minCols / 2, dh >= cellH * minRows / 2 else { return nil }
 
-    let cols = min(maxCols, max(minCols, Int(floor(drawableW / cellW))))
-    let rows = min(maxRows, max(minRows, Int(floor(drawableH / cellH))))
+    let cols = min(maxCols, max(minCols, dw / cellW))
+    let rows = min(maxRows, max(minRows, dh / cellH))
+    guard cols > 0, rows > 0 else { return nil }
 
-    let gridW = Float(cols) * cellW
-    let gridH = Float(rows) * cellH
+    let gridW = Float(cols * cellW)
+    let gridH = Float(rows * cellH)
+    let drawableW = Float(max(dw, 1))
+    let drawableH = Float(max(dh, 1))
     return Grid(
       cols: cols,
       rows: rows,
-      cellWidth: cellW,
-      cellHeight: cellH,
+      cellWidth: Float(cellW),
+      cellHeight: Float(cellH),
       originX: max(0, (drawableW - gridW) * 0.5),
-      originY: max(0, (drawableH - gridH) * 0.5)
+      originY: max(0, (drawableH - gridH) * 0.5),
+      drawableWidth: drawableW,
+      drawableHeight: drawableH
     )
   }
 }

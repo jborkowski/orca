@@ -1,17 +1,33 @@
 import SwiftUI
+import UIKit
 
-/// Quiet monochrome chrome aligned with Orca dark tokens (`main.css` `.dark`).
-/// Why: the prior cyan/indigo glass gradient made text unreadable on device.
+/// Chrome colors from Orca `main.css` (`:root` light / `.dark`).
+/// Follows the system appearance — do not force `.preferredColorScheme`.
 enum CompanionTheme {
-  static let background = Color(red: 0.039, green: 0.039, blue: 0.039) // #0a0a0a
-  static let foreground = Color(red: 0.980, green: 0.980, blue: 0.980) // #fafafa
-  static let card = Color(red: 0.090, green: 0.090, blue: 0.090) // #171717
-  static let muted = Color(red: 0.149, green: 0.149, blue: 0.149) // #262626
-  static let mutedForeground = Color(red: 0.639, green: 0.639, blue: 0.639) // #a3a3a3
-  static let border = Color(red: 0.227, green: 0.227, blue: 0.227) // #3a3a3a
-  static let primary = Color(red: 0.898, green: 0.898, blue: 0.898) // #e5e5e5
-  static let primaryForeground = Color(red: 0.090, green: 0.090, blue: 0.090) // #171717
-  static let destructive = Color(red: 0.937, green: 0.267, blue: 0.267)
+  static let background = adaptive(light: 0xFFFFFF, dark: 0x0A0A0A)
+  static let foreground = adaptive(light: 0x0A0A0A, dark: 0xFAFAFA)
+  static let card = adaptive(light: 0xFFFFFF, dark: 0x171717)
+  static let muted = adaptive(light: 0xF5F5F5, dark: 0x262626)
+  static let mutedForeground = adaptive(light: 0x737373, dark: 0xA3A3A3)
+  static let border = adaptive(light: 0xE5E5E5, dark: 0x3A3A3A)
+  static let primary = adaptive(light: 0x171717, dark: 0xE5E5E5)
+  static let primaryForeground = adaptive(light: 0xFAFAFA, dark: 0x171717)
+  static let destructive = Color(uiColor: UIColor(rgb: 0xE40014))
+
+  /// Metal / UIKit terminal chrome (letterbox + empty drawable).
+  static func terminalSurfaceUIColor(style: UIUserInterfaceStyle) -> UIColor {
+    style == .dark ? UIColor(rgb: 0x0A0A0A) : UIColor(rgb: 0xFFFFFF)
+  }
+
+  private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+    Color(
+      uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+          ? UIColor(rgb: dark)
+          : UIColor(rgb: light)
+      }
+    )
+  }
 }
 
 struct CompanionBackdrop: View {
@@ -44,5 +60,16 @@ extension View {
   /// Back-compat name used across views — solid primary pill, not cyan glass.
   func companionGlassButton() -> some View {
     companionPrimaryButton()
+  }
+}
+
+extension UIColor {
+  convenience init(rgb: UInt32) {
+    self.init(
+      red: CGFloat((rgb >> 16) & 0xFF) / 255,
+      green: CGFloat((rgb >> 8) & 0xFF) / 255,
+      blue: CGFloat(rgb & 0xFF) / 255,
+      alpha: 1
+    )
   }
 }

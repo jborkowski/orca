@@ -33,4 +33,6 @@ final class SwiftTermEnginePlaceholder: TerminalEngine {
   func reset() {
     buffer.removeAll(keepingCapacity: false)
   }
+
+  func scrollByRows(_ delta: Int) {}
 }

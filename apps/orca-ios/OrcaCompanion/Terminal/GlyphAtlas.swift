@@ -8,7 +8,8 @@ struct GlyphUV: Equatable {
   var cellColumns: Int
 }
 
-/// RGBA Metal glyph atlas with ligature-aware CoreText shaping + overflow wrap.
+/// RGBA Metal glyph atlas. Glyphs are rasterized with UIKit (top-left) so CTM/text-matrix
+/// fights do not flatten characters into one-pixel-tall smears.
 final class GlyphAtlas {
   let texture: MTLTexture
   let cellPixelWidth: Int
@@ -21,8 +22,7 @@ final class GlyphAtlas {
   private let atlasSize: Int
   private(set) var generation = 0
 
-  /// - Parameter pointSize: raster size in atlas pixels (use `13 * screen.scale`
-  ///   so 13pt glyphs stay crisp on Retina drawables).
+  /// - Parameter pointSize: size in atlas pixels (pass `13 * screen.scale`).
   init?(device: MTLDevice, pointSize: CGFloat = 13, atlasSize: Int = 2048) {
     self.device = device
     self.pointSize = pointSize
@@ -38,23 +38,16 @@ final class GlyphAtlas {
     guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
     self.texture = texture
 
-    let metricsFont = CTFontCreateWithName("Menlo" as CFString, pointSize, nil)
-    let ascent = CTFontGetAscent(metricsFont)
-    let descent = CTFontGetDescent(metricsFont)
-    let leading = CTFontGetLeading(metricsFont)
-    cellPixelHeight = Int(ceil(ascent + descent + leading)) + 4
-    var m: UniChar = 0x004D
-    var glyph: CGGlyph = 0
-    CTFontGetGlyphsForCharacters(metricsFont, &m, &glyph, 1)
-    var advance = CGSize.zero
-    CTFontGetAdvancesForGlyphs(metricsFont, .horizontal, &glyph, &advance, 1)
-    cellPixelWidth = max(Int(ceil(advance.width)) + 2, 7)
+    let font = UIFont(name: "Menlo", size: pointSize)
+      ?? .monospacedSystemFont(ofSize: pointSize, weight: .regular)
+    let advance = ("M" as NSString).size(withAttributes: [.font: font]).width
+    cellPixelWidth = max(Int(ceil(advance)) + 2, 7)
+    cellPixelHeight = max(Int(ceil(font.lineHeight)) + 4, Int(ceil(pointSize * 1.25)))
 
     clearAtlasPixels()
     _ = rasterize(" ", cellColumns: 1)
   }
 
-  /// Returns UV; if atlas wrapped during this call, `generation` is already bumped.
   func uv(for text: String, cellColumns: Int = 1) -> GlyphUV? {
     let key = cacheKey(text, cellColumns: cellColumns)
     if let cached = cache[key] { return cached }
@@ -83,12 +76,10 @@ final class GlyphAtlas {
     cursorX = 0
     cursorY = 0
     clearAtlasPixels()
-    // Don't recurse into rasterize here — seed space after wrap from caller path.
     seedSpaceGlyph()
   }
 
   private func seedSpaceGlyph() {
-    // Direct pack of a blank cell so overflow fallback always exists.
     let w = cellPixelWidth
     let h = cellPixelHeight
     let blank = [UInt8](repeating: 0, count: w * h * 4)
@@ -119,12 +110,10 @@ final class GlyphAtlas {
     return UIFont(descriptor: cascaded, size: pointSize)
   }
 
-  /// Ligature-friendly attributes: essential ligatures on + emoji cascade font.
   private func shapedAttributes() -> [NSAttributedString.Key: Any] {
     [
       .font: drawingFont(),
       .foregroundColor: UIColor.white,
-      // 2 = essential ligatures (fi/fl etc.) via Core Text / AppKit bridge on iOS.
       .ligature: NSNumber(value: 2)
     ]
   }
@@ -157,22 +146,19 @@ final class GlyphAtlas {
       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { return nil }
 
-    // Why: CG bitmap origin is bottom-left. Flip once to top-left so Metal
-    // samples (v=0 at texture top) match upright glyphs without a second UV flip.
+    // Why: UIGraphicsPushContext + flip gives UIKit top-left drawing into a
+    // bitmap whose row0 is Metal v=0 — no CTLineDraw text-matrix flatten.
+    UIGraphicsPushContext(ctx)
     ctx.translateBy(x: 0, y: CGFloat(h))
     ctx.scaleBy(x: 1, y: -1)
-    ctx.clear(CGRect(x: 0, y: 0, width: w, height: h))
-
+    UIColor.clear.setFill()
+    UIRectFill(CGRect(x: 0, y: 0, width: w, height: h))
     let attr = NSAttributedString(string: text, attributes: shapedAttributes())
-    // CTTypesetter → CTLine so ligature substitution runs through the shaper.
-    let typesetter = CTTypesetterCreateWithAttributedString(attr)
-    let line = CTTypesetterCreateLine(typesetter, CFRange(location: 0, length: attr.length))
-    let font = drawingFont()
-    // Baseline from the top in the flipped CTM (not `h - ascent` — that double-counts).
-    ctx.textPosition = CGPoint(x: 1, y: font.ascender + 1)
-    CTLineDraw(line, ctx)
+    let textSize = attr.size()
+    let y = max(0, (CGFloat(h) - textSize.height) * 0.5)
+    attr.draw(at: CGPoint(x: 1, y: y))
+    UIGraphicsPopContext()
 
-    // Mono glyphs often land as white RGB; ensure alpha from coverage if needed.
     for i in stride(from: 0, to: pixels.count, by: 4) {
       let r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3]
       if a == 0, r | g | b != 0 {

@@ -10,6 +10,8 @@ protocol TerminalEngine: AnyObject {
   /// Visible screen as plain text (for tests / debug dumps). Not the Metal glyph path.
   func plainTextSnapshot() throws -> String
   func reset()
+  /// Scroll the visible viewport through local scrollback. Negative = older history.
+  func scrollByRows(_ delta: Int)
 }
 
 enum TerminalEngineError: Error, Equatable {

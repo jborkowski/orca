@@ -132,7 +132,7 @@ extension GhosttyVtEngine {
         cursorRow: cursorHasValue ? Int(cursorY) : nil,
         cursorVisible: cursorVisible && cursorHasValue,
         dirty: .none
-      )
+      ).remapped(for: chromeAppearance)
     }
 
     var rowIterRef = rowIter
@@ -220,7 +220,7 @@ extension GhosttyVtEngine {
       dirtyKind = .partial(rows: dirtyRows)
     }
 
-    return TerminalFrame(
+    let frame = TerminalFrame(
       cols: colCount,
       rows: rowCount,
       cells: capture.cachedCells,
@@ -231,6 +231,8 @@ extension GhosttyVtEngine {
       cursorVisible: cursorVisible && cursorHasValue,
       dirty: dirtyKind
     )
+    // Why: rematerialize dark host TUIs (Cursor Agent) onto companion paper/ink.
+    return frame.remapped(for: chromeAppearance)
   }
 
   /// Rough East Asian Width: emoji / many CJK occupy two cells in the atlas UV.
